@@ -66,4 +66,3 @@ def test_resume_after_negative_adjustment_safe():
     # Day closing matches new_eod
     assert ledg2[day - 1].closing_cents == new_eod
     assert sched2.actions[day - 1] == base_schedule.actions[day - 1]
-

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 from ..core.model import Bill, Deposit, Plan, to_cents, Adjustment
 
@@ -11,7 +10,10 @@ def load_plan(path: str | Path) -> Plan:
     p = Path(path)
     data = json.loads(p.read_text())
 
-    deposits = [Deposit(day=int(d["day"]), amount_cents=to_cents(d["amount"])) for d in data.get("deposits", [])]
+    deposits = [
+        Deposit(day=int(d["day"]), amount_cents=to_cents(d["amount"]))
+        for d in data.get("deposits", [])
+    ]
     bills = [
         Bill(day=int(b["day"]), name=str(b["name"]), amount_cents=to_cents(b["amount"]))
         for b in data.get("bills", [])
@@ -25,7 +27,11 @@ def load_plan(path: str | Path) -> Plan:
     manual_adjustments = []
     for a in man_adj_data:
         manual_adjustments.append(
-            Adjustment(day=int(a["day"]), amount_cents=to_cents(a["amount"]), note=str(a.get("note", "")))
+            Adjustment(
+                day=int(a["day"]),
+                amount_cents=to_cents(a["amount"]),
+                note=str(a.get("note", "")),
+            )
         )
 
     plan = Plan(

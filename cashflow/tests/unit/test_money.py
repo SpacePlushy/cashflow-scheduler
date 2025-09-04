@@ -8,4 +8,3 @@ def test_money_roundtrip():
     assert cents_to_str(0) == "0.00"
     assert cents_to_str(123) == "1.23"
     assert cents_to_str(-123) == "-1.23"
-

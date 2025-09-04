@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -20,7 +18,9 @@ def _default_plan_path() -> Path:
 
 
 @app.command("solve")
-def cmd_solve(plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json")):
+def cmd_solve(
+    plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json")
+):
     path = Path(plan_path) if plan_path else _default_plan_path()
     plan = load_plan(path)
     schedule = dp_solve(plan)
@@ -60,7 +60,9 @@ def cmd_export(
 
 
 @app.command("verify")
-def cmd_verify(plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json")):
+def cmd_verify(
+    plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json")
+):
     """Cross-verify DP solution against CP-SAT sequential-lex optimum."""
     path = Path(plan_path) if plan_path else _default_plan_path()
     plan = load_plan(path)
@@ -76,6 +78,7 @@ def cmd_verify(plan_path: Optional[str] = typer.Argument(None, help="Path to pla
     else:
         typer.echo(report.detail)
         raise typer.Exit(code=2)
+
 
 def main():
     app()

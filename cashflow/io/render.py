@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from ..core.model import DayLedger, Schedule, cents_to_str
+from ..core.model import Schedule, cents_to_str
 
 
 def render_markdown(schedule: Schedule) -> str:
@@ -15,7 +15,8 @@ def render_markdown(schedule: Schedule) -> str:
         )
     lines.append("")
     w, b2b, delta, large, sp = schedule.objective
-    lines.append(f"Objective: workdays={w}, b2b={b2b}, |Δ|={cents_to_str(delta)}, large_days={large}, single_pen={sp}")
+    lines.append(
+        f"Objective: workdays={w}, b2b={b2b}, |Δ|={cents_to_str(delta)}, large_days={large}, single_pen={sp}"
+    )
     lines.append(f"Final closing: {cents_to_str(schedule.final_closing_cents)}")
     return "\n".join(lines)
-

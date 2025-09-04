@@ -6,7 +6,6 @@ from typing import Dict, List, Optional, Tuple
 from ..core.model import (
     Plan,
     Schedule,
-    DayLedger,
     SHIFT_NET_CENTS,
     build_prefix_arrays,
     pre_rent_base_on_day30,
@@ -57,7 +56,9 @@ def solve(plan: Plan) -> Schedule:
     # State key: (last6_off_tuple, prevWorked:int, workUsed:int, net:int)
     # last6_off_tuple: tuple[int,...] oldest->newest, len<=6
     layers: List[Dict[Tuple, _StateVal]] = []
-    s0: Dict[Tuple, _StateVal] = {(( ), 0, 0, 0): _StateVal(b2b=0, large_days=0, single_pen=0, back=None)}
+    s0: Dict[Tuple, _StateVal] = {
+        ((), 0, 0, 0): _StateVal(b2b=0, large_days=0, single_pen=0, back=None)
+    }
     layers.append(s0)
 
     for day in range(1, 31):
@@ -103,7 +104,9 @@ def solve(plan: Plan) -> Schedule:
                 # Update costs
                 b2b_new = val.b2b + (1 if (prevW == 1 and will_work == 1) else 0)
                 large_days_new = val.large_days + (1 if a == "L" else 0)
-                single_pen_new = val.single_pen + (1 if a == "M" else 2 if a == "L" else 0)
+                single_pen_new = val.single_pen + (
+                    1 if a == "M" else 2 if a == "L" else 0
+                )
 
                 state_key = (last6_new, 1 if will_work else 0, work_used_new, net_new)
                 new_val = _StateVal(
@@ -132,7 +135,11 @@ def solve(plan: Plan) -> Schedule:
     best_tuple: Optional[Tuple[Tuple[int, int, int, int, int], Tuple, _StateVal]] = None
     for (last6_off, prevW, workUsed, net), val in layers[-1].items():
         final_closing = base[30] + net
-        if not (plan.target_end_cents - plan.band_cents <= final_closing <= plan.target_end_cents + plan.band_cents):
+        if not (
+            plan.target_end_cents - plan.band_cents
+            <= final_closing
+            <= plan.target_end_cents + plan.band_cents
+        ):
             continue
         abs_delta = abs(final_closing - plan.target_end_cents)
         obj = (workUsed, val.b2b, abs_delta, val.large_days, val.single_pen)
@@ -168,5 +175,10 @@ def solve(plan: Plan) -> Schedule:
 
     ledger = build_ledger(plan, actions)
     final_closing = ledger[-1].closing_cents
-    schedule = Schedule(actions=actions, objective=objective, final_closing_cents=final_closing, ledger=ledger)
+    schedule = Schedule(
+        actions=actions,
+        objective=objective,
+        final_closing_cents=final_closing,
+        ledger=ledger,
+    )
     return schedule

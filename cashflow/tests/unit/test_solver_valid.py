@@ -11,4 +11,3 @@ def test_dp_produces_valid_schedule(tmp_path: Path):
     schedule = solve(plan)
     report = validate(plan, schedule)
     assert report.ok, report.checks
-

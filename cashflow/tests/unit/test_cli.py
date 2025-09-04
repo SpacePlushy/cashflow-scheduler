@@ -21,4 +21,3 @@ def test_cli_export_writes_file(tmp_path):
     assert out_path.exists()
     text = out_path.read_text()
     assert "Objective:" in text
-

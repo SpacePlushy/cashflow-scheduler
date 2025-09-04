@@ -3,7 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Tuple
 
-from .model import Plan, Schedule, SHIFT_NET_CENTS, build_prefix_arrays, pre_rent_base_on_day30
+from .model import (
+    Plan,
+    Schedule,
+    SHIFT_NET_CENTS,
+    build_prefix_arrays,
+    pre_rent_base_on_day30,
+)
 
 
 @dataclass
@@ -47,7 +53,13 @@ def validate(plan: Plan, schedule: Schedule) -> ValidationReport:
     net_total = sum(SHIFT_NET_CENTS[a] for a in schedule.actions)
     pre_rent_balance = pre30 + net_total
     rent_ok = pre_rent_balance >= plan.rent_guard_cents
-    checks.append(("Day-30 pre-rent guard", rent_ok, f"{pre_rent_balance}>= {plan.rent_guard_cents}"))
+    checks.append(
+        (
+            "Day-30 pre-rent guard",
+            rent_ok,
+            f"{pre_rent_balance}>= {plan.rent_guard_cents}",
+        )
+    )
 
     # Off-Off in each rolling 7-day window
     off = [1 if a == "O" else 0 for a in schedule.actions]
@@ -61,4 +73,3 @@ def validate(plan: Plan, schedule: Schedule) -> ValidationReport:
 
     ok = all(p for _, p, _ in checks)
     return ValidationReport(ok=ok, checks=checks)
-

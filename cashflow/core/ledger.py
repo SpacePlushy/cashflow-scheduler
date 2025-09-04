@@ -12,7 +12,9 @@ def build_ledger(plan: Plan, actions: List[str]) -> List[DayLedger]:
     # opening for day t = base[t-1] + net_so_far
     net_so_far = 0
     for t in range(1, 31):
-        opening = (plan.start_balance_cents + sum(dep[1:t]) - sum(bills[1:t])) + net_so_far
+        opening = (
+            plan.start_balance_cents + sum(dep[1:t]) - sum(bills[1:t])
+        ) + net_so_far
         a = actions[t - 1]
         net_today = SHIFT_NET_CENTS[a]
         closing = base[t] + net_so_far + net_today
@@ -29,4 +31,3 @@ def build_ledger(plan: Plan, actions: List[str]) -> List[DayLedger]:
         )
         net_so_far += net_today
     return ledger
-

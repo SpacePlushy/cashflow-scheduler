@@ -107,7 +107,9 @@ def build_prefix_arrays(plan: Plan) -> Tuple[List[int], List[int], List[int]]:
     return dep, bills, base
 
 
-def pre_rent_base_on_day30(plan: Plan, deposit_by_day: List[int], bills_by_day: List[int]) -> int:
+def pre_rent_base_on_day30(
+    plan: Plan, deposit_by_day: List[int], bills_by_day: List[int]
+) -> int:
     # Pre-rent balance after deposits and shifts on Day 30 (before paying rent)
     # = start + sum(deposits[1..30]) - sum(bills[1..29])
     pre = plan.start_balance_cents + sum(deposit_by_day[1:31]) - sum(bills_by_day[1:30])

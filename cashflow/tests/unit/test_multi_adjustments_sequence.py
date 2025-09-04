@@ -13,7 +13,9 @@ def test_three_sequential_adjustments_with_locks():
     # 1) Adjust day 6 by +$3.00
     plan1 = load_plan("plan.json")
     plan1.actions = sched0.actions[:6] + [None] * (30 - 6)
-    plan1.manual_adjustments = plan1.manual_adjustments + [Adjustment(day=6, amount_cents=300, note="adj1")]
+    plan1.manual_adjustments = plan1.manual_adjustments + [
+        Adjustment(day=6, amount_cents=300, note="adj1")
+    ]
     sched1 = solve(plan1)
     ledg1 = build_ledger(plan1, sched1.actions)
     assert ledg1[5].closing_cents == ledg0[5].closing_cents + 300

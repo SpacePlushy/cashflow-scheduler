@@ -18,7 +18,8 @@ def test_prefix_and_ledger_consistency():
     net_so_far = 0
     for t, row in enumerate(ledger, start=1):
         # opening_t = start + sum(dep[1..t-1]) - sum(bills[1..t-1]) + net_so_far
-        opening_expected = (plan.start_balance_cents + sum(dep[1:t]) - sum(bills[1:t])) + net_so_far
+        opening_expected = (
+            plan.start_balance_cents + sum(dep[1:t]) - sum(bills[1:t])
+        ) + net_so_far
         assert row.opening_cents == opening_expected
         net_so_far += row.net_cents
-

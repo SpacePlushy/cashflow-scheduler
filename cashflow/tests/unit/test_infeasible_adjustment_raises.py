@@ -17,8 +17,9 @@ def test_too_negative_adjustment_causes_infeasibility_with_locked_day():
     delta = -(closing + 1)
     plan2 = load_plan("plan.json")
     plan2.actions = base_sched.actions[:day] + [None] * (30 - day)
-    plan2.manual_adjustments = plan2.manual_adjustments + [Adjustment(day=day, amount_cents=delta, note="force infeasible")]
+    plan2.manual_adjustments = plan2.manual_adjustments + [
+        Adjustment(day=day, amount_cents=delta, note="force infeasible")
+    ]
 
     with pytest.raises(RuntimeError):
         solve(plan2)
-

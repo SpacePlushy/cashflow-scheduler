@@ -5,10 +5,15 @@ from typing import Dict, List, Tuple
 
 try:
     from ortools.sat.python import cp_model
-except Exception as e:  # pragma: no cover - optional dependency
+except Exception:  # pragma: no cover - optional dependency
     cp_model = None  # type: ignore
 
-from ..core.model import SHIFT_NET_CENTS, Plan, build_prefix_arrays, pre_rent_base_on_day30
+from ..core.model import (
+    SHIFT_NET_CENTS,
+    Plan,
+    build_prefix_arrays,
+    pre_rent_base_on_day30,
+)
 
 
 ActionList = ["O", "S", "M", "L", "SS"]
@@ -48,7 +53,7 @@ def _build_model(plan: Plan):
     b2b = [model.NewBoolVar(f"b2b_{t}") for t in range(29)]
     oo = [model.NewBoolVar(f"oo_{t}") for t in range(29)]
     prefix_net = [model.NewIntVar(0, 12000 * (t + 1), f"pref_{t}") for t in range(30)]
-    final_close = model.NewIntVar(-10**9, 10**9, "final_close")
+    final_close = model.NewIntVar(-(10**9), 10**9, "final_close")
     abs_diff = model.NewIntVar(0, 10**9, "abs_diff")
 
     # One-hot and lock handling
@@ -183,7 +188,11 @@ def solve_lex(plan: Plan) -> CPSATSolution:
         actions.append(ACTIONS[idx])
 
     final_cents = solver.Value(final_close)
-    sol = CPSATSolution(actions=actions, objective=(w, b2b, absd, large, sp), final_closing_cents=final_cents)
+    sol = CPSATSolution(
+        actions=actions,
+        objective=(w, b2b, absd, large, sp),
+        final_closing_cents=final_cents,
+    )
     return sol
 
 

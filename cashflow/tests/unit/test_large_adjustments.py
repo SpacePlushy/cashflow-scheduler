@@ -32,7 +32,7 @@ def test_large_positive_adjustments_multiple_days():
     base_ledg = build_ledger(plan, base_sched.actions)
 
     cases = {
-        4: 10000,   # +$100
+        4: 10000,  # +$100
         10: 25000,  # +$250
         17: 50000,  # +$500
         24: 30000,  # +$300
@@ -41,7 +41,9 @@ def test_large_positive_adjustments_multiple_days():
     for day, delta in cases.items():
         plan2 = load_plan("plan.json")
         plan2.actions = base_sched.actions[:day] + [None] * (30 - day)
-        plan2.manual_adjustments = plan2.manual_adjustments + [Adjustment(day=day, amount_cents=delta, note="large+")]
+        plan2.manual_adjustments = plan2.manual_adjustments + [
+            Adjustment(day=day, amount_cents=delta, note="large+")
+        ]
         sched2 = solve(plan2)
         rep2 = validate(plan2, sched2)
         assert rep2.ok, rep2.checks
@@ -72,7 +74,9 @@ def test_large_negative_adjustments_safe_with_capacity():
 
         plan2 = load_plan("plan.json")
         plan2.actions = base_sched.actions[:day] + [None] * (30 - day)
-        plan2.manual_adjustments = plan2.manual_adjustments + [Adjustment(day=day, amount_cents=delta, note="large-")]
+        plan2.manual_adjustments = plan2.manual_adjustments + [
+            Adjustment(day=day, amount_cents=delta, note="large-")
+        ]
         sched2 = solve(plan2)
         rep2 = validate(plan2, sched2)
         assert rep2.ok, rep2.checks
@@ -96,7 +100,9 @@ def test_day30_large_positive_adjustment_with_flexible_action():
     plan2 = load_plan("plan.json")
     # lock only up to day 27; allow days 28-30 to adjust to absorb +$250
     plan2.actions = base_sched.actions[:27] + [None, None, None]
-    plan2.manual_adjustments = plan2.manual_adjustments + [Adjustment(day=day, amount_cents=delta, note="d30 large+")]
+    plan2.manual_adjustments = plan2.manual_adjustments + [
+        Adjustment(day=day, amount_cents=delta, note="d30 large+")
+    ]
     sched2 = solve(plan2)
     rep2 = validate(plan2, sched2)
     assert rep2.ok, rep2.checks
