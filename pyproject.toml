@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cashflow"
+version = "0.1.0"
+description = "30-Day Cash-Flow Scheduler (DP)"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13.7",
+]
+
+[project.scripts]
+cash = "cashflow.cli:main"
+
