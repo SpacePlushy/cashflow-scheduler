@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 
 # Copy entire repo (needed to install cashflow package) and install
 COPY . /app
-RUN pip install --no-cache-dir -r verify_service/requirements.txt \
+RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir -e .
 
 EXPOSE 8080

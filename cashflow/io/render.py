@@ -20,3 +20,46 @@ def render_markdown(schedule: Schedule) -> str:
     )
     lines.append(f"Final closing: {cents_to_str(schedule.final_closing_cents)}")
     return "\n".join(lines)
+
+
+def render_csv(schedule: Schedule) -> str:
+    lines: List[str] = []
+    lines.append("Day,Opening,Deposits,Action,Net,Bills,Closing")
+    for row in schedule.ledger:
+        lines.append(
+            ",".join(
+                [
+                    str(row.day),
+                    cents_to_str(row.opening_cents),
+                    cents_to_str(row.deposit_cents),
+                    row.action,
+                    cents_to_str(row.net_cents),
+                    cents_to_str(row.bills_cents),
+                    cents_to_str(row.closing_cents),
+                ]
+            )
+        )
+    return "\n".join(lines)
+
+
+def render_json(schedule: Schedule) -> str:
+    import json
+
+    obj = {
+        "actions": schedule.actions,
+        "objective": list(schedule.objective),
+        "final_closing": cents_to_str(schedule.final_closing_cents),
+        "ledger": [
+            {
+                "day": r.day,
+                "opening": cents_to_str(r.opening_cents),
+                "deposits": cents_to_str(r.deposit_cents),
+                "action": r.action,
+                "net": cents_to_str(r.net_cents),
+                "bills": cents_to_str(r.bills_cents),
+                "closing": cents_to_str(r.closing_cents),
+            }
+            for r in schedule.ledger
+        ],
+    }
+    return json.dumps(obj, separators=(",", ":"))

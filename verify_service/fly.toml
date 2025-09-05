@@ -2,7 +2,7 @@ app = "cashflow-check-c7ec35c"
 primary_region = "iad"
 
 [build]
-  dockerfile = "verify_service/Dockerfile"
+  dockerfile = "Dockerfile"
   context = ".."
 
 [http_service]

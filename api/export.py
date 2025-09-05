@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from ._shared import _load_default_plan, dp_solve, render_markdown, render_csv, render_json, _cors_headers, handle_preflight
+from ._shared import _load_default_plan, dp_solve, _cors_headers, handle_preflight
 
 
 def handler(request):
@@ -18,12 +18,15 @@ def handler(request):
 
     plan = _load_default_plan()
     schedule = dp_solve(plan)
+    # Import renderers lazily to avoid deployment mismatches during cold starts
+    from cashflow.io.render import render_markdown as _rmd, render_csv as _rcsv, render_json as _rjson
+
     if fmt == "md":
-        content = render_markdown(schedule)
+        content = _rmd(schedule)
     elif fmt == "csv":
-        content = render_csv(schedule)
+        content = _rcsv(schedule)
     else:
-        content = render_json(schedule)
+        content = _rjson(schedule)
     origin = None
     try:
         origin = request.headers.get("origin")  # type: ignore[attr-defined]

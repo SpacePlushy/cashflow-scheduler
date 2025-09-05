@@ -9,11 +9,12 @@ type SolveResult = {
   checks: [string, boolean, string][]
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE
+// Always call same-origin /api and let Next.js rewrites proxy to upstream
+const API_BASE = ''
 const VERIFY_BASE = process.env.NEXT_PUBLIC_VERIFY_BASE
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const base = API_BASE ?? (typeof window !== 'undefined' && location.hostname === 'localhost' ? 'http://127.0.0.1:8000' : '/api')
+  const base = '/api'
   const url = base + path
   const res = await fetch(url, { headers: { 'content-type':'application/json' }, ...init })
   if (!res.ok) throw new Error(await res.text())
@@ -59,7 +60,7 @@ export default function Home() {
           try { const r = await api<{format:string; content:string}>('/export', { method:'POST', body: JSON.stringify({ format:'md' }) }); setExportText(r.content) }
           catch(e:any){ setErr(e.message || String(e)) }
         }}>Export MD</button>
-        <span style={{color:'#777'}}>{API_BASE ? `API ${API_BASE}` : 'API default (/api)'} {VERIFY_BASE ? ` · Verify ${VERIFY_BASE}` : ''}</span>
+        <span style={{color:'#777'}}>API /api (proxied) {VERIFY_BASE ? ` · Verify ${VERIFY_BASE}` : ''}</span>
       </div>
       {verifyMsg && <div style={{color:'#0c6', padding:'6px 0'}}>{verifyMsg}</div>}
       {exportText && (

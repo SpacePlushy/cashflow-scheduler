@@ -7,7 +7,13 @@ from cashflow.io.store import load_plan
 from cashflow.engines.dp import solve as dp_solve
 from cashflow.core.ledger import build_ledger
 from cashflow.core.validate import validate
-from cashflow.io.render import render_markdown, render_csv, render_json
+"""Shared utilities for serverless API handlers.
+
+Avoid importing optional render helpers here, since not all functions need
+them and importing them at module import time can cause ImportError if a
+stale deploy is running older code. Handlers that need exports should import
+from cashflow.io.render locally in their modules.
+"""
 from cashflow.engines.cpsat import verify_lex_optimal
 from cashflow.core.model import Plan, Bill, Deposit, Adjustment, to_cents
 
