@@ -32,6 +32,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string|undefined>()
   const [verifyMsg, setVerifyMsg] = useState<string|undefined>()
+  const [exportText, setExportText] = useState<string|undefined>()
 
   const solve = async () => {
     setLoading(true); setErr(undefined)
@@ -54,9 +55,19 @@ export default function Home() {
         }} disabled={!VERIFY_BASE}>
           Verify
         </button>
+        <button onClick={async ()=>{
+          try { const r = await api<{format:string; content:string}>('/export', { method:'POST', body: JSON.stringify({ format:'md' }) }); setExportText(r.content) }
+          catch(e:any){ setErr(e.message || String(e)) }
+        }}>Export MD</button>
         <span style={{color:'#777'}}>{API_BASE ? `API ${API_BASE}` : 'API default (/api)'} {VERIFY_BASE ? ` · Verify ${VERIFY_BASE}` : ''}</span>
       </div>
       {verifyMsg && <div style={{color:'#0c6', padding:'6px 0'}}>{verifyMsg}</div>}
+      {exportText && (
+        <div style={{marginTop:10}}>
+          <h3>Export (md)</h3>
+          <textarea style={{width:'100%', minHeight:200}} readOnly value={exportText} />
+        </div>
+      )}
       {err && <pre style={{color:'#c00', background:'#fee', padding:8, border:'1px solid #fbb'}}>{err}</pre>}
       {data && (
         <>
@@ -71,7 +82,17 @@ export default function Home() {
             </thead>
             <tbody>
               {data.ledger.map(r=> (
-                <tr key={r.day}>
+                <tr key={r.day} onDoubleClick={async ()=>{
+                  const val = prompt(`Set EOD for day ${r.day} (e.g., 1286.01)`, r.closing)
+                  if (!val) return
+                  try {
+                    const n = Number(val)
+                    if (!Number.isFinite(n)) throw new Error('Invalid number')
+                    setLoading(true)
+                    const res = await api<SolveResult>('/set_eod', { method:'POST', body: JSON.stringify({ day: r.day, eod_amount: n }) })
+                    setData(res)
+                  } catch(e:any) { setErr(e.message || String(e)) } finally { setLoading(false) }
+                }}>
                   <td style={{textAlign:'right', padding:'6px 8px'}}>{r.day}</td>
                   <td style={{textAlign:'right', padding:'6px 8px'}}>{r.opening}</td>
                   <td style={{textAlign:'right', padding:'6px 8px'}}>{r.deposits}</td>
