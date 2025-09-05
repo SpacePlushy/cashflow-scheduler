@@ -7,7 +7,9 @@ async function forward(req: NextRequest, segments: string[]) {
   if (!API_BASE) {
     return new Response('API base not configured', { status: 500 })
   }
-  const url = new URL(API_BASE.replace(/\/$/, '') + '/' + segments.join('/'))
+  const base = API_BASE.replace(/\/$/, '')
+  // Route through the FastAPI index function to avoid stale single-file handlers
+  const url = new URL(`${base}/index/${segments.join('/')}`)
   if (API_BYPASS) url.searchParams.set('x-vercel-protection-bypass', API_BYPASS)
 
   const init: RequestInit = {
@@ -40,4 +42,3 @@ export async function OPTIONS(req: NextRequest, { params }: { params: { path: st
   // Preflight passthrough
   return forward(req, params.path)
 }
-
