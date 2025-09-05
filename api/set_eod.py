@@ -7,10 +7,13 @@ from cashflow.core.model import Adjustment
 from cashflow.core.ledger import build_ledger
 from cashflow.engines.dp import solve as dp_solve
 from cashflow.core.validate import validate
-from ._shared import _load_default_plan
+from ._shared import _load_default_plan, _cors_headers, handle_preflight
 
 
 def handler(request):
+    pf = handle_preflight(request)
+    if pf is not None:
+        return pf
     try:
         body = request.get_json() if hasattr(request, "get_json") else json.loads(request.body or "{}")
     except Exception:
@@ -56,5 +59,9 @@ def handler(request):
         ],
         "checks": report.checks,
     }
-    return json.dumps(result), 200, {"Content-Type": "application/json"}
-
+    origin = None
+    try:
+        origin = request.headers.get("origin")  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    return json.dumps(result), 200, _cors_headers(origin)

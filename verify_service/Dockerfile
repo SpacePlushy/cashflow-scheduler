@@ -5,7 +5,7 @@ WORKDIR /app
 # System deps (optional; keep slim)
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
 
-# Copy repo and install the core package
+# Copy entire repo (needed to install cashflow package) and install
 COPY . /app
 RUN pip install --no-cache-dir -r verify_service/requirements.txt \
     && pip install --no-cache-dir -e .

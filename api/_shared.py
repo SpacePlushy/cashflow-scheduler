@@ -67,3 +67,29 @@ def _load_default_plan() -> Plan:
 
 def json_response(obj: Dict[str, Any]) -> tuple[str, int, Dict[str, str]]:
     return json.dumps(obj, separators=(",", ":")), 200, {"Content-Type": "application/json"}
+
+
+def _cors_headers(origin: str | None = None) -> Dict[str, str]:
+    o = origin or "*"
+    return {
+        "Access-Control-Allow-Origin": o,
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Vary": "Origin",
+        "Content-Type": "application/json",
+    }
+
+
+def handle_preflight(request) -> tuple[str, int, Dict[str, str]] | None:
+    try:
+        method = getattr(request, "method", None) or request.method  # type: ignore[attr-defined]
+    except Exception:
+        method = None
+    if (method or "").upper() == "OPTIONS":
+        origin = None
+        try:
+            origin = request.headers.get("origin")  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        return "", 204, _cors_headers(origin)
+    return None

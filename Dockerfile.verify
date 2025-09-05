@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
+
+# Install verify service dependencies (includes OR-Tools)
+COPY verify_service/requirements.txt /app/verify_requirements.txt
+RUN pip install --no-cache-dir -r /app/verify_requirements.txt
+
+# Copy core package and service code
+COPY cashflow /app/cashflow
+RUN mkdir -p /app/verify_service
+COPY verify_service/app.py /app/verify_service/app.py
+COPY plan.json /app/plan.json
+
+ENV PYTHONPATH=/app
+EXPOSE 8080
+CMD ["uvicorn", "verify_service.app:app", "--host", "0.0.0.0", "--port", "8080"]

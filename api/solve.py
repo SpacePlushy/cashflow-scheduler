@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
-from ._shared import _load_default_plan, dp_solve, validate
+from ._shared import _load_default_plan, dp_solve, validate, _cors_headers, handle_preflight
 
 
 def handler(request):
+    pf = handle_preflight(request)
+    if pf is not None:
+        return pf
     plan = _load_default_plan()
     schedule = dp_solve(plan)
     report = validate(plan, schedule)
@@ -26,5 +29,9 @@ def handler(request):
         ],
         "checks": report.checks,
     })
-    return body, 200, {"Content-Type": "application/json"}
-
+    origin = None
+    try:
+        origin = request.headers.get("origin")  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    return body, 200, _cors_headers(origin)

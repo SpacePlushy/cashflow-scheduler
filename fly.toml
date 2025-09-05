@@ -1,9 +1,8 @@
-app = "cashflow-check-c7ec35c"
+app = "cashflow-check-dev"
 primary_region = "iad"
 
 [build]
-  dockerfile = "verify_service/Dockerfile"
-  context = ".."
+  dockerfile = "Dockerfile.verify"
 
 [http_service]
   internal_port = 8080
