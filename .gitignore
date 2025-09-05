@@ -19,7 +19,12 @@ dist/
 build/
 *.egg-info/
 
+# Frontend local deps
+ui/node_modules/
+web/node_modules/
+
 # Coverage
 .coverage
 htmlcov/
 
+.vercel

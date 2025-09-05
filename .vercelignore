@@ -1,0 +1,12 @@
+# Exclude heavy directories from serverless function bundle
+.git/
+.venv/
+.hypothesis/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.coverage
+node_modules/
+ui/
+web/
+AGENTS.pdf
