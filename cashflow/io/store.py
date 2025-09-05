@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ..core.model import Bill, Deposit, Plan, to_cents, Adjustment
+from ..core.model import Bill, Deposit, Plan, to_cents, Adjustment, cents_to_str
 
 
 def load_plan(path: str | Path) -> Plan:
@@ -47,3 +47,30 @@ def load_plan(path: str | Path) -> Plan:
         metadata=dict(data.get("metadata", {})),
     )
     return plan
+
+
+def save_plan(path: str | Path, plan: Plan) -> None:
+    p = Path(path)
+    # Serialize amounts as strings to avoid float drift
+    data = {
+        "start_balance": cents_to_str(plan.start_balance_cents),
+        "target_end": cents_to_str(plan.target_end_cents),
+        "band": cents_to_str(plan.band_cents),
+        "rent_guard": cents_to_str(plan.rent_guard_cents),
+        "deposits": [
+            {"day": d.day, "amount": cents_to_str(d.amount_cents)}
+            for d in plan.deposits
+        ],
+        "bills": [
+            {"day": b.day, "name": b.name, "amount": cents_to_str(b.amount_cents)}
+            for b in plan.bills
+        ],
+        "actions": plan.actions,
+        "manual_adjustments": [
+            {"day": a.day, "amount": cents_to_str(a.amount_cents), "note": a.note}
+            for a in plan.manual_adjustments
+        ],
+        "locks": plan.locks,
+        "metadata": plan.metadata,
+    }
+    p.write_text(json.dumps(data, indent=2, sort_keys=True))

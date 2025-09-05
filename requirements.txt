@@ -9,4 +9,5 @@ ruff>=0.5
 black>=24.4
 ortools>=9.10 ; platform_system!="Darwin" or platform_machine!="arm64"
 ortools>=9.8  ; platform_system=="Darwin" and platform_machine=="arm64"
-
+fastapi>=0.110
+uvicorn[standard]>=0.27

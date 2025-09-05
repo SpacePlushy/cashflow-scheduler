@@ -104,3 +104,6 @@ Notes:
 - Day 5: Polish, diff view, error UX; docs.
 - Day 6–7: Tests (API unit + UI integration), CI updates, README screenshots.
 
+---
+
+See also: `docs/web_ui_design.md` for the detailed Apple‑themed frontend design (IA, layout, components, a11y).

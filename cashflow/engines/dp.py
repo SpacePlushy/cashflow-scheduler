@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from copy import deepcopy
 from typing import Dict, List, Optional, Tuple
 
 from ..core.model import (
@@ -25,11 +26,15 @@ class _StateVal:
     back: Optional[Tuple]  # (prev_state_key, action)
 
 
-def _allowed_actions(day: int, locked: Optional[str]) -> List[Action]:
+def _allowed_actions(
+    day: int, locked: Optional[str], forbid_large_after_day1: bool
+) -> List[Action]:
     if locked is not None:
         return [locked]
     if day == 1:
         return ["L"]
+    if forbid_large_after_day1:
+        return ["O", "S", "M", "SS"]
     return ["O", "S", "M", "SS", "L"]
 
 
@@ -40,7 +45,7 @@ def _has_off_off(vec: List[int]) -> bool:
     return False
 
 
-def solve(plan: Plan) -> Schedule:
+def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
     dep, bills, base = build_prefix_arrays(plan)
 
     # Precompute global net bounds for pruning
@@ -69,7 +74,7 @@ def solve(plan: Plan) -> Schedule:
             last6_off_tuple: Tuple[int, ...] = last6_off if isinstance(last6_off, tuple) else tuple(last6_off)  # type: ignore
 
             locked = plan.actions[day - 1] if day - 1 < len(plan.actions) else None
-            for a in _allowed_actions(day, locked):
+            for a in _allowed_actions(day, locked, forbid_large_after_day1):
                 will_work = 1 if a != "O" else 0
                 work_used_new = workUsed + will_work
 
@@ -182,3 +187,21 @@ def solve(plan: Plan) -> Schedule:
         ledger=ledger,
     )
     return schedule
+
+
+def solve_from(
+    plan: Plan, start_day: int, *, forbid_large_after_day1: bool = False
+) -> Schedule:
+    """Solve with prefix [1..start_day-1] locked to the optimal baseline for `plan`,
+    then re-solve the tail [start_day..30]. Convenience wrapper; currently locks
+    actions and calls `solve()` rather than seeding state directly.
+    """
+    if not (1 <= start_day <= 30):
+        raise ValueError("start_day must be in 1..30")
+    if start_day == 1:
+        return solve(plan, forbid_large_after_day1=forbid_large_after_day1)
+    base = solve(plan, forbid_large_after_day1=forbid_large_after_day1)
+    plan2 = deepcopy(plan)
+    lock_upto = start_day - 1
+    plan2.actions = base.actions[:lock_upto] + [None] * (30 - lock_upto)
+    return solve(plan2, forbid_large_after_day1=forbid_large_after_day1)

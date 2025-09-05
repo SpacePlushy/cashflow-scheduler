@@ -15,3 +15,7 @@ dependencies = [
 [project.scripts]
 cash = "cashflow.cli:main"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cashflow*"]
+exclude = ["ui*", "scripts*"]

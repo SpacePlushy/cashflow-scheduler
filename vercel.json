@@ -1,0 +1,18 @@
+{
+  "buildCommand": "npm ci --prefix ui && npm run build --prefix ui",
+  "outputDirectory": "ui/dist",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "functions": {
+    "api/index.py": {
+      "runtime": "python3.11",
+      "includeFiles": [
+        "cashflow/**",
+        "plan.json",
+        "api/requirements.txt"
+      ]
+    }
+  }
+}
