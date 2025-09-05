@@ -1,0 +1,1 @@
+# Minimal dependencies for serverless functions (use stdlib + local package)
