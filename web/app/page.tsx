@@ -10,6 +10,7 @@ type SolveResult = {
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE
+const VERIFY_BASE = process.env.NEXT_PUBLIC_VERIFY_BASE
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const base = API_BASE ?? (typeof window !== 'undefined' && location.hostname === 'localhost' ? 'http://127.0.0.1:8000' : '/api')
@@ -18,11 +19,19 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) throw new Error(await res.text())
   return res.json() as Promise<T>
 }
+async function apiVerify() {
+  const base = VERIFY_BASE ?? (typeof window !== 'undefined' && location.hostname === 'localhost' ? 'http://127.0.0.1:8000' : undefined)
+  if (!base) throw new Error('Verify service not configured')
+  const res = await fetch(base + '/verify', { method:'POST', headers: { 'content-type':'application/json' } })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json() as Promise<{ ok:boolean; dp_obj:number[]; cp_obj:number[]; detail:string }>
+}
 
 export default function Home() {
   const [data, setData] = useState<SolveResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string|undefined>()
+  const [verifyMsg, setVerifyMsg] = useState<string|undefined>()
 
   const solve = async () => {
     setLoading(true); setErr(undefined)
@@ -38,8 +47,16 @@ export default function Home() {
       <h1>Cashflow</h1>
       <div style={{display:'flex', gap:8, alignItems:'center'}}>
         <button onClick={solve} disabled={loading}>{loading? 'Solving…':'Solve'}</button>
-        <span style={{color:'#777'}}>{process.env.NEXT_PUBLIC_API_BASE ? `API ${process.env.NEXT_PUBLIC_API_BASE}` : 'API default (/api)'}</span>
+        <button onClick={async ()=>{
+          setVerifyMsg(undefined); setErr(undefined)
+          try { const v = await apiVerify(); setVerifyMsg(v.ok ? 'Verify: OK' : `Verify: ${v.detail}`) }
+          catch(e:any){ setErr(e.message || String(e)) }
+        }} disabled={!VERIFY_BASE}>
+          Verify
+        </button>
+        <span style={{color:'#777'}}>{API_BASE ? `API ${API_BASE}` : 'API default (/api)'} {VERIFY_BASE ? ` · Verify ${VERIFY_BASE}` : ''}</span>
       </div>
+      {verifyMsg && <div style={{color:'#0c6', padding:'6px 0'}}>{verifyMsg}</div>}
       {err && <pre style={{color:'#c00', background:'#fee', padding:8, border:'1px solid #fbb'}}>{err}</pre>}
       {data && (
         <>
