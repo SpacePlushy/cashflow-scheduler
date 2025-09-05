@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from cashflow.engines.dp import solve as dp_solve
@@ -26,10 +27,26 @@ class VerifyOut(BaseModel):
 
 app = FastAPI(title="Cashflow Verify Service")
 
+# Allow browser calls from your UI origins (update as needed)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "*",  # TODO: replace with your Vercel UI origin for production
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/")
+def root():
+    return {"service": "cashflow-verify", "status": "ok"}
 
 
 @app.post("/verify", response_model=VerifyOut)
@@ -43,4 +60,3 @@ def verify():
         cp_obj=list(report.cp_obj),
         detail=report.detail,
     )
-
