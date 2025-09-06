@@ -188,7 +188,7 @@ def enumerate_ties(plan: Plan, limit: int = 5) -> List[CPSATSolution]:
     return sols
 
 
-def _status_name(code: int) -> str:
+def _status_name(code: object) -> str:
     try:
         if code == cp_model.OPTIMAL:
             return "OPTIMAL"
