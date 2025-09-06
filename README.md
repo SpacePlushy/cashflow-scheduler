@@ -46,6 +46,18 @@ CLI
 - Verify with CP‑SAT: `python -m cashflow.cli verify`
 - All commands default to `./plan.json`; pass a custom path as an argument.
 
+EOD Override Example
+
+- Set Day‑6 to end at $167.00 and re‑solve the remainder:
+  - `python -m cashflow.cli set-eod 6 167`
+- Optionally persist a derived plan with the locked prefix and adjustment:
+  - `python -m cashflow.cli set-eod 6 167 --save-plan plan_eod6_167.json`
+
+Troubleshooting
+
+- `python` vs `python3`: these may be different interpreters with different site‑packages. If `python -m pytest` fails but `python3 -m pytest` works, install missing deps for your `python` (e.g., `python -m pip install --user --break-system-packages pytest ortools`) or use the repo venv (`.venv/bin/python -m pytest`).
+- OR‑Tools for verify: the `verify` command requires OR‑Tools. If unavailable, `verify` exits non‑zero. Install it for your interpreter: `python -m pip install --user --break-system-packages 'ortools>=9.8'`.
+
 API (local dev)
 
 - Install: `pip install -r api/requirements.txt` (use a venv)

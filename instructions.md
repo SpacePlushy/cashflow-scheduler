@@ -306,22 +306,22 @@ for day in 1..30:
 ## 6.1 CLI (Typer)
 
 ```
-cash solve                 # full-month solve
-cash show [--focus 10-18]  # print table / audits / checks
-cash export --format md|csv|json --out out.md
+cash solve                       # full-month solve (prints table + validation)
+cash show                        # print table only
+cash export --format md --out out.md
+cash set-eod <day> <amt>         # set EOD on <day> and re-solve tail
+cash verify                      # DP vs CP-SAT cross-check (sequential lex)
 
-cash go <day>              # move focus to day
-cash set-eod <day> <amt>   # insert manual adjustment on day; recompute prefix
-cash solve --from <day>    # resume solve from day (day..30 or day+1..30 depending on design)
+# Future ideas (not all implemented):
+# cash go <day>                   # move focus to day
+# cash solve --from <day>         # resume solve from day
+# cash pareto --max 5             # list Pareto/lex ties
+# cash why <day>                  # explain local choice
 
-cash pareto --max 5        # show 3–5 Pareto-optimal alternatives
-cash why <day>             # compact rationale for chosen action
-cash verify                # DP vs CP-SAT cross-check
-
-# Global flags
---forbid-large-after-day1  # optional comfort constraint
---target <amt> --band <amt>
---engine dp|cpsat
+# Global flags (future)
+# --forbid-large-after-day1
+# --target <amt> --band <amt>
+# --engine dp|cpsat
 ```
 
 ## 6.2 Python Interfaces
