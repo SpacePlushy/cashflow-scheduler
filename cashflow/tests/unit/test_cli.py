@@ -21,3 +21,15 @@ def test_cli_export_writes_file(tmp_path):
     assert out_path.exists()
     text = out_path.read_text()
     assert "Objective:" in text
+
+
+def test_cli_verify_prints_statuses():
+    result = runner.invoke(app, ["verify"])
+    assert result.exit_code == 0
+    out = result.stdout
+    # Core lines
+    assert "DP Objective:" in out
+    assert "CP-SAT Objective:" in out
+    # New status section
+    assert "Solver statuses:" in out
+    assert "- workdays:" in out
