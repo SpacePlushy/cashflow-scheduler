@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 CP-SAT verification and tie-enumeration engine.
 
@@ -24,6 +22,8 @@ Key ideas:
 - Sequential lexicographic optimization modeled by solving 5 stages in order
   and fixing the previous objective part to its optimum before proceeding.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
@@ -73,6 +73,7 @@ class CPSATSolution:
     - final_closing_cents: closing balance on Day-30
     - statuses: per-stage CP-SAT status names during lex solve
     """
+
     actions: List[str]
     objective: Tuple[int, int, int, int, int]
     final_closing_cents: int
@@ -87,6 +88,7 @@ class VerificationReport:
     describes the error; otherwise `ok` reflects whether the DP objective
     matches the CP-SAT lexicographic optimum.
     """
+
     ok: bool
     dp_obj: Tuple[int, int, int, int, int]
     cp_obj: Tuple[int, int, int, int, int]

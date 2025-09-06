@@ -91,9 +91,15 @@ def cmd_verify(
 @app.command("set-eod")
 def cmd_set_eod(
     day: int = typer.Argument(..., help="Day index (1..30) to set EOD for"),
-    eod_amount: float = typer.Argument(..., help="Desired end-of-day balance (e.g., 167.00)"),
-    plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json (defaults to CWD)"),
-    save_plan: Optional[str] = typer.Option(None, help="Optional path to write updated plan JSON"),
+    eod_amount: float = typer.Argument(
+        ..., help="Desired end-of-day balance (e.g., 167.00)"
+    ),
+    plan_path: Optional[str] = typer.Argument(
+        None, help="Path to plan.json (defaults to CWD)"
+    ),
+    save_plan: Optional[str] = typer.Option(
+        None, help="Optional path to write updated plan JSON"
+    ),
 ):
     """Adjust the plan so that Day `day` closes at `eod_amount`, lock days 1..day,
     and re-solve the remainder. Prints the new schedule and validation report.
@@ -145,7 +151,6 @@ def cmd_set_eod(
         except Exception as e:
             typer.echo(f"Failed to write updated plan: {e}", err=True)
             raise typer.Exit(code=2)
-
 
 
 def main():
