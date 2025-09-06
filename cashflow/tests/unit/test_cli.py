@@ -10,7 +10,7 @@ def test_cli_show_succeeds_and_prints_table():
     result = runner.invoke(app, ["show"])
     assert result.exit_code == 0
     out = result.stdout
-    assert "| Day | Opening | Deposits | Action | Net | Bills | Closing |" in out
+    assert "| Day | Opening | Action | Payout | Deposits | Bills | Closing |" in out
     assert "Final closing:" in out
 
 

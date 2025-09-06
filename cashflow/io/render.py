@@ -7,11 +7,14 @@ from ..core.model import Schedule, cents_to_str
 
 def render_markdown(schedule: Schedule) -> str:
     lines: List[str] = []
-    lines.append("| Day | Opening | Deposits | Action | Net | Bills | Closing |")
-    lines.append("| ---:| -------:| --------:|:------:| ---:| -----:| -------:|")
+    # Display shift payout as its own column and list it after the action
+    # to reflect that Flex deposits occur after working (SS deposits after
+    # the second shift). External deposits remain in the Deposits column.
+    lines.append("| Day | Opening | Action | Payout | Deposits | Bills | Closing |")
+    lines.append("| ---:| -------:|:------:| ------:| --------:| -----:| -------:|")
     for row in schedule.ledger:
         lines.append(
-            f"| {row.day:>3} | {cents_to_str(row.opening_cents):>7} | {cents_to_str(row.deposit_cents):>8} | {row.action:^6} | {cents_to_str(row.net_cents):>3} | {cents_to_str(row.bills_cents):>5} | {cents_to_str(row.closing_cents):>7} |"
+            f"| {row.day:>3} | {cents_to_str(row.opening_cents):>7} | {row.action:^6} | {cents_to_str(row.net_cents):>6} | {cents_to_str(row.deposit_cents):>8} | {cents_to_str(row.bills_cents):>5} | {cents_to_str(row.closing_cents):>7} |"
         )
     lines.append("")
     w, b2b, delta, large, sp = schedule.objective
@@ -76,9 +79,9 @@ def build_rich_table(schedule: Schedule):  # pragma: no cover - UI convenience
     table = Table(show_header=True, header_style="bold", expand=False, box=None)
     table.add_column("Day", justify="right", no_wrap=True)
     table.add_column("Opening", justify="right", no_wrap=True)
-    table.add_column("Deposits", justify="right", no_wrap=True)
     table.add_column("Action", justify="center", no_wrap=True)
-    table.add_column("Net", justify="right", no_wrap=True)
+    table.add_column("Payout", justify="right", no_wrap=True)
+    table.add_column("Deposits", justify="right", no_wrap=True)
     table.add_column("Bills", justify="right", no_wrap=True)
     table.add_column("Closing", justify="right", no_wrap=True)
 
@@ -86,9 +89,9 @@ def build_rich_table(schedule: Schedule):  # pragma: no cover - UI convenience
         table.add_row(
             str(row.day),
             cents_to_str(row.opening_cents),
-            cents_to_str(row.deposit_cents),
             row.action,
             cents_to_str(row.net_cents),
+            cents_to_str(row.deposit_cents),
             cents_to_str(row.bills_cents),
             cents_to_str(row.closing_cents),
         )
