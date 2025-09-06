@@ -113,12 +113,21 @@ def render_calendar_png(
         )
         draw.text((x1 - pad - tw - 12, y0 + pad), tag, fill=txt, font=label_font)
 
+        # Metrics column layout (labels + values), no spaces for alignment.
         y = y0 + pad + 78
-        draw.text((x0 + pad, y), f"Deposits  {cents_to_str(row.deposit_cents)}", fill=txt, font=small_font)
+        label_x = x0 + pad
+        col_gap = max(120, min(220, cell_w // 3))
+        value_x = x0 + pad + col_gap
+
+        def _row(lbl: str, val: str, y: int):
+            draw.text((label_x, y), lbl, fill=sub, font=small_font)
+            draw.text((value_x, y), val, fill=txt, font=small_font)
+
+        _row("Deposits", cents_to_str(row.deposit_cents), y)
         y += 34
-        draw.text((x0 + pad, y), f"Bills     {cents_to_str(row.bills_cents)}", fill=txt, font=small_font)
+        _row("Bills", cents_to_str(row.bills_cents), y)
         y += 34
-        draw.text((x0 + pad, y), f"Net       {cents_to_str(row.net_cents)}", fill=txt, font=small_font)
+        _row("Net", cents_to_str(row.net_cents), y)
 
         close = cents_to_str(row.closing_cents)
         cw, ch = _wh(close, close_font)
@@ -126,4 +135,3 @@ def render_calendar_png(
 
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     img.save(str(out_path), format="PNG", optimize=True)
-
