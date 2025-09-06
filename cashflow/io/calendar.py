@@ -107,14 +107,22 @@ def render_calendar_png(
         tag = row.action
         tw, th = _wh(tag, label_font)
         badge_margin = max(24, int(min(cell_w, cell_h) * 0.03))
-        inner_pad_x, inner_pad_y = 12, 8
+        inner_pad_x, inner_pad_y = 18, 12
         bx2 = x1 - badge_margin
         bx1 = bx2 - (tw + inner_pad_x * 2)
         by1 = y0 + badge_margin
         by2 = by1 + (th + inner_pad_y * 2)
         radius = int((th + inner_pad_y * 2) / 2)
         draw.rounded_rectangle([bx1, by1, bx2, by2], radius=radius, outline=txt, width=3)
-        draw.text((bx1 + inner_pad_x, by1 + inner_pad_y), tag, fill=txt, font=label_font)
+        # Center the text within the badge using the text bbox center.
+        cx = (bx1 + bx2) / 2
+        cy = (by1 + by2) / 2
+        try:
+            # Pillow >=8 supports anchor; 'mm' = middle/middle.
+            draw.text((cx, cy), tag, fill=txt, font=label_font, anchor="mm")
+        except TypeError:
+            # Fallback: compute top-left such that bbox is centered.
+            draw.text((cx - tw / 2, cy - th / 2), tag, fill=txt, font=label_font)
 
         # Metrics column layout (labels + values), no spaces for alignment.
         y = y0 + pad + 78
