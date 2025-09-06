@@ -73,7 +73,7 @@ def cmd_verify(
     if getattr(report, "statuses", None):
         names = ["workdays", "b2b", "|Δ|", "large_days", "single_pen"]
         typer.echo("Solver statuses:")
-        for i, s in enumerate(report.statuses):
+        for i, s in enumerate(report.statuses or []):
             label = names[i] if i < len(names) else f"part{i+1}"
             typer.echo(f"- {label}: {s}")
     if report.ok:

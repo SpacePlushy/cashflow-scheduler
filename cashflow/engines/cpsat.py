@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 try:
     from ortools.sat.python import cp_model
@@ -37,7 +37,7 @@ class VerificationReport:
     dp_actions: List[str]
     cp_actions: List[str]
     detail: str = ""
-    statuses: List[str] = None  # type: ignore[assignment]
+    statuses: Optional[List[str]] = None
 
 
 def _build_model(plan: Plan):
