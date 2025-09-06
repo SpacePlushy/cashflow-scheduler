@@ -103,15 +103,18 @@ def render_calendar_png(
         # Day and Action tag
         draw.text((x0 + pad, y0 + pad), f"{day}", fill=txt, font=num_font)
 
+        # Action badge (top-right), keep generous margins to avoid clipping
         tag = row.action
         tw, th = _wh(tag, label_font)
-        draw.rounded_rectangle(
-            [x1 - pad - tw - 24, y0 + pad - 8, x1 - pad, y0 + pad + th + 8],
-            radius=12,
-            outline=txt,
-            width=2,
-        )
-        draw.text((x1 - pad - tw - 12, y0 + pad), tag, fill=txt, font=label_font)
+        badge_margin = max(24, int(min(cell_w, cell_h) * 0.03))
+        inner_pad_x, inner_pad_y = 12, 8
+        bx2 = x1 - badge_margin
+        bx1 = bx2 - (tw + inner_pad_x * 2)
+        by1 = y0 + badge_margin
+        by2 = by1 + (th + inner_pad_y * 2)
+        radius = int((th + inner_pad_y * 2) / 2)
+        draw.rounded_rectangle([bx1, by1, bx2, by2], radius=radius, outline=txt, width=3)
+        draw.text((bx1 + inner_pad_x, by1 + inner_pad_y), tag, fill=txt, font=label_font)
 
         # Metrics column layout (labels + values), no spaces for alignment.
         y = y0 + pad + 78
