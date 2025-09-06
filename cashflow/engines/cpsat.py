@@ -1,9 +1,37 @@
+"""
+CP-SAT verification and tie-enumeration engine.
+
+This module builds a constraint programming model in OR-Tools CP-SAT that
+captures the same feasibility rules and objective used by the DP solver. It is
+used to:
+
+- Solve a sequential lexicographic objective (workdays, back-to-back work,
+  |final diff|, number of large days, and a final single-day penalty) and
+  extract an optimal 30-day schedule.
+- Cross-check a DP-produced schedule for lexicographic optimality.
+- Enumerate alternative schedules ("ties") that achieve the exact same
+  lexicographic objective value.
+
+Key ideas:
+- One-hot action variable per day over ACTIONS = ("O","S","M","L","SS").
+- Derived boolean indicators for off/work, back-to-back work pairs, and
+  off-off pairs in adjacent days.
+- Integer prefix balance recursion over net cents deltas per action.
+- Feasibility constraints mirror validator rules: non-negative daily closings,
+  Day-1 Large, Day-30 pre-rent guard, final band, and an Off-Off window rule.
+- Sequential lexicographic optimization modeled by solving 5 stages in order
+  and fixing the previous objective part to its optimum before proceeding.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 
 try:
+    # Optional dependency: the rest of the repo (DP engine, CLI, tests) can run
+    # without OR-Tools installed. We guard imports and raise clear errors only
+    # when CP-SAT specific functions are invoked.
     from ortools.sat.python import cp_model
 except Exception:  # pragma: no cover - optional dependency
     cp_model = None  # type: ignore
@@ -15,14 +43,37 @@ from ..core.model import (
     pre_rent_base_on_day30,
 )
 
+# Notes on core.model imports:
+# - Plan: input data class describing the month, target band, rent guard, and
+#   optional per-day action locks. Only a subset of fields is used here.
+# - SHIFT_NET_CENTS: mapping from action symbol (e.g., "M") to integer cents
+#   representing the net cash delta contributed by performing that action on a
+#   given day.
+# - build_prefix_arrays(plan): returns deterministic base arrays (deposit/bill
+#   prefixes and a combined base trajectory) against which dynamic action
+#   deltas are added to compute daily closings.
+# - pre_rent_base_on_day30(...): extracts the deterministic amount relevant to
+#   the Day-30 pre-rent guard (i.e., the base part of the balance before
+#   applying action deltas on or before Day-30).
+
 
 ActionList = ["O", "S", "M", "L", "SS"]
+# Canonical action order used to index decision variables. This order must
+# match how SHIFT_NET_CENTS is accessed below.
 ACTIONS = ("O", "S", "M", "L", "SS")
 IDX: Dict[str, int] = {a: i for i, a in enumerate(ACTIONS)}
 
 
 @dataclass
 class CPSATSolution:
+    """Container for a CP-SAT schedule and its objective components.
+
+    - actions: the chosen action symbol per day (length 30)
+    - objective: 5-tuple in lexicographic order
+    - final_closing_cents: closing balance on Day-30
+    - statuses: per-stage CP-SAT status names during lex solve
+    """
+
     actions: List[str]
     objective: Tuple[int, int, int, int, int]
     final_closing_cents: int
@@ -31,6 +82,13 @@ class CPSATSolution:
 
 @dataclass
 class VerificationReport:
+    """Result of verifying a DP schedule with CP-SAT.
+
+    If OR-Tools is unavailable or CP-SAT fails, `ok` is False and `detail`
+    describes the error; otherwise `ok` reflects whether the DP objective
+    matches the CP-SAT lexicographic optimum.
+    """
+
     ok: bool
     dp_obj: Tuple[int, int, int, int, int]
     cp_obj: Tuple[int, int, int, int, int]
@@ -41,94 +99,158 @@ class VerificationReport:
 
 
 def _build_model(plan: Plan):
+    """Construct the CP-SAT model for a given `plan`.
+
+    Returns: (model, x, obj_parts, final_close)
+    - model: cp_model.CpModel
+    - x: shape (30,5) list of BoolVar (one-hot actions per day)
+    - obj_parts: tuple of IntVar/LinearExpr for objective parts
+    - final_close: IntVar for final closing balance
+
+    Notes on inputs from core.model:
+    - build_prefix_arrays(plan) -> (dep, bills, base): cumulative arrays used to
+      express daily closing balances; `base[t+1] + prefix_net[t]` is the closing
+      balance on day t.
+    - pre_rent_base_on_day30(plan, dep, bills): base amount for the pre-rent
+      guard constraint on Day-30.
+    """
     assert cp_model is not None, "OR-Tools CP-SAT not available"
 
     dep, bills, base = build_prefix_arrays(plan)
+    # `base` is a length-31 vector of deterministic cents; `dep` and `bills`
+    # are cumulative prefixes of deposits and bills. The dynamic part comes
+    # from action deltas accumulated into `prefix_net` below.
     pre30 = pre_rent_base_on_day30(plan, dep, bills)
 
     model = cp_model.CpModel()
 
     # Decision vars
+    # x[t][a] == 1 iff action `ACTIONS[a]` is chosen on day t.
     x = [[model.NewBoolVar(f"x_{t}_{a}") for a in range(5)] for t in range(30)]
     off = [model.NewBoolVar(f"off_{t}") for t in range(30)]
     w = [model.NewBoolVar(f"w_{t}") for t in range(30)]
+    # Adjacent-pair indicators for (work,work) and (off,off).
     b2b = [model.NewBoolVar(f"b2b_{t}") for t in range(29)]
     oo = [model.NewBoolVar(f"oo_{t}") for t in range(29)]
+    # Cumulative sum of action deltas (in cents) up to day t.
+    # Upper bound is a safe coarse cap to keep domains finite.
     prefix_net = [model.NewIntVar(0, 12000 * (t + 1), f"pref_{t}") for t in range(30)]
     final_close = model.NewIntVar(-(10**9), 10**9, "final_close")
     abs_diff = model.NewIntVar(0, 10**9, "abs_diff")
 
+    # Rationale for domains:
+    # - prefix_net: coarse upper bounds (12k per day) are conservative but
+    #   avoid needless search by preventing unbounded growth; lower bound 0 is
+    #   consistent with non-negative or zero net deltas in SHIFT_NET_CENTS.
+    # - final_close: wide bounds; we subsequently constrain it to the target
+    #   band, which effectively tightens its domain during solving.
+    # - abs_diff: non-negative absolute deviation, linked via AddAbsEquality.
+
     # One-hot and lock handling
     for t in range(30):
+        # Exactly one action chosen per day.
         model.Add(sum(x[t]) == 1)
-        # Locks via plan.actions
+        # Locks via plan.actions: if a day is pre-fixed, force its one-hot.
+        # This is how users can "pin" certain days when exploring schedules.
         locked = plan.actions[t]
         if locked is not None:
             for a in range(5):
                 model.Add(x[t][a] == (1 if a == IDX[locked] else 0))
 
     # Day 1 Large
+    # Business rule: the first day must be a Large shift. This mirrors the
+    # validator and DP solver’s model assumptions.
     model.Add(x[0][IDX["L"]] == 1)
 
     # off, w
     for t in range(30):
         model.Add(off[t] == x[t][IDX["O"]])
-        # w = 1 - off
+        # w is the boolean negation of off (work if not off).
         model.Add(w[t] + off[t] == 1)
 
     # b2b linearization
     for t in range(29):
+        # b2b[t] = AND(w[t], w[t+1]) using standard linearization:
+        # b2b <= w_t, b2b <= w_t+1, b2b >= w_t + w_t+1 - 1
         model.Add(b2b[t] <= w[t])
         model.Add(b2b[t] <= w[t + 1])
         model.Add(b2b[t] >= w[t] + w[t + 1] - 1)
 
     # oo (off-off) linearization
     for t in range(29):
+        # oo[t] = AND(off[t], off[t+1])
         model.Add(oo[t] <= off[t])
         model.Add(oo[t] <= off[t + 1])
         model.Add(oo[t] >= off[t] + off[t + 1] - 1)
 
     # Prefix net recursion
+    # Map actions to per-day net cents deltas.
     net_vec = [SHIFT_NET_CENTS[a] for a in ACTIONS]
     # day 0
     model.Add(prefix_net[0] == sum(net_vec[a] * x[0][a] for a in range(5)))
     for t in range(1, 30):
+        # prefix_net[t] = prefix_net[t-1] + net(action_t)
         model.Add(
             prefix_net[t]
             == prefix_net[t - 1] + sum(net_vec[a] * x[t][a] for a in range(5))
         )
+    # With base[] provided by build_prefix_arrays, the closing balance on day t
+    # is base[t+1] + prefix_net[t]. The constraints below enforce feasibility.
 
     # Non-negative daily closings
     for t in range(30):
+        # Closing balance at day t is base[t+1] + prefix_net[t]; enforce >= 0.
         model.Add(base[t + 1] + prefix_net[t] >= 0)
 
     # Day 30 pre-rent guard
+    # Ensure enough cash prior to rent: base part + dynamic deltas >= guard.
     model.Add(pre30 + prefix_net[29] >= plan.rent_guard_cents)
 
     # Final closing within band and |diff|
     model.Add(final_close == base[30] + prefix_net[29])
     model.Add(final_close >= plan.target_end_cents - plan.band_cents)
     model.Add(final_close <= plan.target_end_cents + plan.band_cents)
+    # abs_diff = |final_close - target|
     model.AddAbsEquality(abs_diff, final_close - plan.target_end_cents)
 
     # Off-Off window rule: For each 7-day window s..s+6, sum oo[i] >= 1
     for s in range(0, 24):
+        # Each 7-day window contains 6 adjacent pairs; require at least one
+        # off-off adjacent pair within the window.
         model.Add(sum(oo[i] for i in range(s, s + 6)) >= 1)
 
     # Objective components
+    # We optimize lexicographically over these five parts (in order):
+    # 1) Minimize total workdays; 2) minimize back-to-back work pairs;
+    # 3) minimize |final diff from target|; 4) minimize number of Large days;
+    # 5) minimize a tie-breaker penalizing M and especially L.
     workdays = sum(w)
     b2b_sum = sum(b2b)
     large_days = sum(x[t][IDX["L"]] for t in range(30))
     single_pen = sum(x[t][IDX["M"]] + 2 * x[t][IDX["L"]] for t in range(30))
+    # Notes:
+    # - workdays: encourages more off days when feasible.
+    # - b2b_sum: discourages consecutive working days to spread work out.
+    # - abs_diff: centers final balance within the target band with a preference
+    #   toward the target itself when multiple values lie within the band.
+    # - large_days: prefers fewer Large shifts after satisfying (1)-(3).
+    # - single_pen: final tie-breaker to prefer Medium over Large, and avoid
+    #   unnecessary Mediums as well.
 
     return model, x, (workdays, b2b_sum, abs_diff, large_days, single_pen), final_close
 
 
 def enumerate_ties(plan: Plan, limit: int = 5) -> List[CPSATSolution]:
-    """Enumerate up to `limit` alternative action sequences with the same optimal
-    lexicographic objective using CP-SAT solution enumeration.
+    """Enumerate alternative schedules with the same optimal objective.
 
-    Requires OR-Tools. Returns a (possibly empty) list including the baseline solution.
+    Procedure:
+    1) Run sequential lex optimization to obtain the optimal objective vector.
+    2) Re-build the model and fix each objective part to that optimal value.
+    3) Drop the objective and enumerate distinct feasible action sequences
+       using a `CpSolverSolutionCallback`, stopping after `limit` solutions.
+
+    Returns a list possibly including the baseline schedule; list may be empty
+    if no solution is found within the time limit.
     """
     if cp_model is None:  # pragma: no cover - optional dependency
         raise RuntimeError("OR-Tools CP-SAT not installed")
@@ -180,8 +302,14 @@ def enumerate_ties(plan: Plan, limit: int = 5) -> List[CPSATSolution]:
                     final_closing_cents=final_cents,
                 )
             )
+            # Note: We do not record solver status per enumerated solution here;
+            # instead, `statuses` are captured during the lex run that fixed the
+            # objective parts. Enumeration purely explores equal-optimum ties.
 
     solver = cp_model.CpSolver()
+    # Mild time cap and multi-threading for enumeration.
+    # If your ties are numerous, consider raising the time or lowering
+    # `num_search_workers` for determinism.
     solver.parameters.max_time_in_seconds = 10.0
     solver.parameters.num_search_workers = 8
     solver.SearchForAllSolutions(model, Collector())
@@ -189,6 +317,7 @@ def enumerate_ties(plan: Plan, limit: int = 5) -> List[CPSATSolution]:
 
 
 def _status_name(code: object) -> str:
+    """Map a CP-SAT status code to a human-readable string."""
     try:
         if code == cp_model.OPTIMAL:
             return "OPTIMAL"
@@ -206,6 +335,13 @@ def _status_name(code: object) -> str:
 
 
 def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
+    """Solve a 5-part lexicographic objective sequentially.
+
+    At each stage, minimize the current part, record the optimum, then add an
+    equality constraint fixing that part before moving to the next. This is a
+    standard technique to emulate lexicographic optimization with CP-SAT.
+    Returns the optimal values for each part along with per-stage statuses.
+    """
     workdays, b2b_sum, abs_diff, large_days, single_pen = obj_parts
 
     statuses: List[str] = []
@@ -248,7 +384,7 @@ def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     best_large = solver.Value(large_days)
     model.Add(large_days == best_large)
 
-    # 5) Minimize single_pen
+    # 5) Minimize single_pen (final tie-breaker among Large/Medium usage)
     model.Minimize(single_pen)
     r = solver.Solve(model)
     statuses.append(_status_name(r))
@@ -259,6 +395,7 @@ def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
 
 
 def solve_lex(plan: Plan) -> CPSATSolution:
+    """Run CP-SAT sequential lex optimization and extract the schedule."""
     if cp_model is None:
         raise RuntimeError("OR-Tools CP-SAT not installed")
 
@@ -266,7 +403,7 @@ def solve_lex(plan: Plan) -> CPSATSolution:
     solver = cp_model.CpSolver()
     w, b2b, absd, large, sp, statuses = _solve_sequential_lex(model, obj_parts, solver)
 
-    # Extract actions
+    # Extract actions from the solved one-hot variables.
     actions: List[str] = []
     for t in range(30):
         idx = None
@@ -276,6 +413,8 @@ def solve_lex(plan: Plan) -> CPSATSolution:
                 break
         assert idx is not None
         actions.append(ACTIONS[idx])
+    # `final_close` aligns with base[30] + prefix_net[29] due to the equality
+    # constraint in _build_model. Reading it from the solver is sufficient.
 
     final_cents = solver.Value(final_close)
     sol = CPSATSolution(
@@ -288,7 +427,11 @@ def solve_lex(plan: Plan) -> CPSATSolution:
 
 
 def verify_lex_optimal(plan: Plan, schedule_dp) -> VerificationReport:
-    """Run CP-SAT sequential lex optimization and compare to DP schedule."""
+    """Compare the DP schedule's objective to the CP-SAT optimum.
+
+    Returns a `VerificationReport` with the CP-SAT objective, actions, and
+    per-stage statuses. If OR-Tools is not available, the report explains why.
+    """
     try:
         sol = solve_lex(plan)
     except Exception as e:  # pragma: no cover - dependent on OR-Tools
