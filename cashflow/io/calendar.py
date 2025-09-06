@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Tuple
+from typing import Dict, List, Optional, Tuple
 
 from ..core.model import Schedule, cents_to_str
 
@@ -29,6 +29,7 @@ def render_calendar_png(
     *,
     size: Tuple[int, int] = (3840, 2160),
     theme: str = "dark",
+    bills_by_day: Optional[Dict[int, List[Tuple[str, int]]]] = None,
 ):  # pragma: no cover - visual artifact
     """Render a 30-day calendar to a PNG file (wallpaper-friendly)."""
     try:
@@ -138,11 +139,49 @@ def render_calendar_png(
             draw.text((label_x, y), lbl, fill=sub, font=small_font)
             draw.text((value_x, y), val, fill=txt, font=small_font)
 
+        _row("Payout", cents_to_str(row.net_cents), y)
+        y += 34
         _row("Deposits", cents_to_str(row.deposit_cents), y)
         y += 34
         _row("Bills", cents_to_str(row.bills_cents), y)
-        y += 34
-        _row("Net", cents_to_str(row.net_cents), y)
+
+        # Itemize bill names for the day (up to 3 lines), then a "+N more" line
+        if bills_by_day and bills_by_day.get(day):
+            items = bills_by_day[day]
+
+            def ellipsize(text: str, font, max_w: int) -> str:
+                if draw.textbbox((0, 0), text, font=font)[2] <= max_w:
+                    return text
+                # Add ellipsis until it fits
+                ell = "…"
+                s = text
+                while s and draw.textbbox((0, 0), s + ell, font=font)[2] > max_w:
+                    s = s[:-1]
+                return (s + ell) if s else ell
+
+            max_lines = 3
+            line_count = 0
+            list_x = label_x + 8
+            avail_w = x1 - pad - list_x
+            for name, amt in items:
+                if line_count >= max_lines:
+                    break
+                txt_line = f"• {name}  {cents_to_str(amt)}"
+                draw.text(
+                    (list_x, y + 36 + 4 + 28 * line_count),
+                    ellipsize(txt_line, small_font, avail_w),
+                    fill=txt,
+                    font=small_font,
+                )
+                line_count += 1
+            extra = len(items) - line_count
+            if extra > 0:
+                draw.text(
+                    (list_x, y + 36 + 4 + 28 * line_count),
+                    f"… +{extra} more",
+                    fill=sub,
+                    font=small_font,
+                )
 
         close = cents_to_str(row.closing_cents)
         cw, ch = _wh(close, close_font)

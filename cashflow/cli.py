@@ -192,7 +192,16 @@ def cmd_set_eod(
     if calendar:
         out_path = Path.home() / "Downloads" / "cashflow_calendar.png"
         try:
-            render_calendar_png(schedule, out_path, size=(3840, 2160), theme="dark")
+            bmap: dict[int, list[tuple[str, int]]] = {}
+            for b in plan.bills:
+                bmap.setdefault(b.day, []).append((b.name, b.amount_cents))
+            render_calendar_png(
+                schedule,
+                out_path,
+                size=(3840, 2160),
+                theme="dark",
+                bills_by_day=bmap,
+            )
         except RuntimeError as e:
             typer.echo(str(e), err=True)
             raise typer.Exit(code=2)
@@ -213,6 +222,9 @@ def cmd_calendar(
     path = Path(plan_path) if plan_path else _default_plan_path()
     plan = load_plan(path)
     schedule = dp_solve(plan)
+    bmap: dict[int, list[tuple[str, int]]] = {}
+    for b in plan.bills:
+        bmap.setdefault(b.day, []).append((b.name, b.amount_cents))
 
     out_path = (
         Path(out).expanduser()
@@ -220,7 +232,9 @@ def cmd_calendar(
         else Path.home() / "Downloads" / "cashflow_calendar.png"
     )
     try:
-        render_calendar_png(schedule, out_path, size=(width, height), theme=theme)
+        render_calendar_png(
+            schedule, out_path, size=(width, height), theme=theme, bills_by_day=bmap
+        )
     except RuntimeError as e:
         typer.echo(str(e), err=True)
         raise typer.Exit(code=2)
