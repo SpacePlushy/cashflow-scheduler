@@ -122,6 +122,70 @@ def _build_model(plan: Plan):
     return model, x, (workdays, b2b_sum, abs_diff, large_days, single_pen), final_close
 
 
+def enumerate_ties(plan: Plan, limit: int = 5) -> List[CPSATSolution]:
+    """Enumerate up to `limit` alternative action sequences with the same optimal
+    lexicographic objective using CP-SAT solution enumeration.
+
+    Requires OR-Tools. Returns a (possibly empty) list including the baseline solution.
+    """
+    if cp_model is None:  # pragma: no cover - optional dependency
+        raise RuntimeError("OR-Tools CP-SAT not installed")
+
+    # First, get the optimal objective via sequential lex optimization
+    model_opt, x_opt, obj_parts, final_close_opt = _build_model(plan)
+    solver_opt = cp_model.CpSolver()
+    w, b2b, absd, large, sp = _solve_sequential_lex(model_opt, obj_parts, solver_opt)
+
+    # Build a fresh model with the same constraints and fix the objective parts to the optimal values
+    model, x, obj_parts2, final_close = _build_model(plan)
+    workdays, b2b_sum, abs_diff, large_days, single_pen = obj_parts2
+    model.Add(workdays == w)
+    model.Add(b2b_sum == b2b)
+    model.Add(abs_diff == absd)
+    model.Add(large_days == large)
+    model.Add(single_pen == sp)
+
+    # Enumerate feasible solutions (no objective)
+    sols: List[CPSATSolution] = []
+
+    class Collector(cp_model.CpSolverSolutionCallback):  # type: ignore
+        def __init__(self):
+            super().__init__()
+            self._seen = set()
+
+        def on_solution_callback(self):  # type: ignore
+            if len(sols) >= limit:
+                self.StopSearch()
+                return
+            actions: List[str] = []
+            for t in range(30):
+                idx = None
+                for a in range(5):
+                    if self.Value(x[t][a]) == 1:
+                        idx = a
+                        break
+                assert idx is not None
+                actions.append(ACTIONS[idx])
+            key = tuple(actions)
+            if key in self._seen:
+                return
+            self._seen.add(key)
+            final_cents = self.Value(final_close)
+            sols.append(
+                CPSATSolution(
+                    actions=actions,
+                    objective=(w, b2b, absd, large, sp),
+                    final_closing_cents=final_cents,
+                )
+            )
+
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = 10.0
+    solver.parameters.num_search_workers = 8
+    solver.SearchForAllSolutions(model, Collector())
+    return sols
+
+
 def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     workdays, b2b_sum, abs_diff, large_days, single_pen = obj_parts
 
