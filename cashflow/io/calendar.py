@@ -84,7 +84,9 @@ def render_calendar_png(
         f"work={w}  b2b={b2b}  |Δ|={cents_to_str(delta)}  "
         f"L={large}  pen={sp}  final={cents_to_str(schedule.final_closing_cents)}"
     )
-    draw.text((margin + w_title + 24, margin // 2 + 12), subtitle, fill=sub, font=label_font)
+    draw.text(
+        (margin + w_title + 24, margin // 2 + 12), subtitle, fill=sub, font=label_font
+    )
 
     # Cells
     for row in schedule.ledger:
@@ -113,7 +115,9 @@ def render_calendar_png(
         by1 = y0 + badge_margin
         by2 = by1 + (th + inner_pad_y * 2)
         radius = int((th + inner_pad_y * 2) / 2)
-        draw.rounded_rectangle([bx1, by1, bx2, by2], radius=radius, outline=txt, width=3)
+        draw.rounded_rectangle(
+            [bx1, by1, bx2, by2], radius=radius, outline=txt, width=3
+        )
         # Center the text within the badge using the text bbox center.
         cx = (bx1 + bx2) / 2
         cy = (by1 + by2) / 2

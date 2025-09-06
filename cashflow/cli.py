@@ -189,7 +189,9 @@ def cmd_set_eod(
 @app.command("calendar")
 def cmd_calendar(
     plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json"),
-    out: Optional[str] = typer.Option(None, help="Output PNG path (default: ~/Downloads/cashflow_calendar.png)"),
+    out: Optional[str] = typer.Option(
+        None, help="Output PNG path (default: ~/Downloads/cashflow_calendar.png)"
+    ),
     width: int = typer.Option(3840, help="Image width (px)"),
     height: int = typer.Option(2160, help="Image height (px)"),
     theme: str = typer.Option("dark", help="Theme: dark|light"),
@@ -200,7 +202,9 @@ def cmd_calendar(
     schedule = dp_solve(plan)
 
     out_path = (
-        Path(out).expanduser() if out else Path.home() / "Downloads" / "cashflow_calendar.png"
+        Path(out).expanduser()
+        if out
+        else Path.home() / "Downloads" / "cashflow_calendar.png"
     )
     try:
         render_calendar_png(schedule, out_path, size=(width, height), theme=theme)
