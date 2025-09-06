@@ -42,6 +42,7 @@ CLI
 - Show: `python -m cashflow.cli show`
 - Solve + validate: `python -m cashflow.cli solve`
 - Set EOD and re-solve: `python -m cashflow.cli set-eod <day> <amount>`
+  - Add `--calendar` to overwrite the wallpaper PNG (~/Downloads/cashflow_calendar.png).
 - Calendar wallpaper (PNG): `python -m cashflow.cli calendar --width 3840 --height 2160 --theme dark`
 - Export: `python -m cashflow.cli export --format md --out schedule.md`
 - Verify with CP‑SAT: `python -m cashflow.cli verify`
@@ -53,6 +54,8 @@ EOD Override Example
   - `python -m cashflow.cli set-eod 6 167`
 - Optionally persist a derived plan with the locked prefix and adjustment:
   - `python -m cashflow.cli set-eod 6 167 --save-plan plan_eod6_167.json`
+ - Also refresh the wallpaper in one step (overwrites ~/Downloads/cashflow_calendar.png):
+   - `python -m cashflow.cli set-eod 6 167 --calendar`
 
 Troubleshooting
 

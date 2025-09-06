@@ -124,6 +124,11 @@ def cmd_set_eod(
     save_plan: Optional[str] = typer.Option(
         None, help="Optional path to write updated plan JSON"
     ),
+    calendar: bool = typer.Option(
+        False,
+        "--calendar",
+        help="Also render calendar PNG to ~/Downloads/cashflow_calendar.png",
+    ),
 ):
     """Adjust the plan so that Day `day` closes at `eod_amount`, lock days 1..day,
     and re-solve the remainder. Prints the new schedule and validation report.
@@ -184,6 +189,14 @@ def cmd_set_eod(
         except Exception as e:
             typer.echo(f"Failed to write updated plan: {e}", err=True)
             raise typer.Exit(code=2)
+    if calendar:
+        out_path = Path.home() / "Downloads" / "cashflow_calendar.png"
+        try:
+            render_calendar_png(schedule, out_path, size=(3840, 2160), theme="dark")
+        except RuntimeError as e:
+            typer.echo(str(e), err=True)
+            raise typer.Exit(code=2)
+        typer.echo(f"Updated {out_path}")
 
 
 @app.command("calendar")
