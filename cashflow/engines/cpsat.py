@@ -26,6 +26,7 @@ class CPSATSolution:
     actions: List[str]
     objective: Tuple[int, int, int, int, int]
     final_closing_cents: int
+    statuses: List[str]
 
 
 @dataclass
@@ -36,6 +37,7 @@ class VerificationReport:
     dp_actions: List[str]
     cp_actions: List[str]
     detail: str = ""
+    statuses: List[str] = None  # type: ignore[assignment]
 
 
 def _build_model(plan: Plan):
@@ -186,14 +188,34 @@ def enumerate_ties(plan: Plan, limit: int = 5) -> List[CPSATSolution]:
     return sols
 
 
+def _status_name(code: int) -> str:
+    try:
+        if code == cp_model.OPTIMAL:
+            return "OPTIMAL"
+        if code == cp_model.FEASIBLE:
+            return "FEASIBLE"
+        if code == cp_model.INFEASIBLE:
+            return "INFEASIBLE"
+        if code == cp_model.MODEL_INVALID:
+            return "MODEL_INVALID"
+        if code == cp_model.UNKNOWN:
+            return "UNKNOWN"
+    except Exception:
+        pass
+    return str(code)
+
+
 def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     workdays, b2b_sum, abs_diff, large_days, single_pen = obj_parts
+
+    statuses: List[str] = []
 
     # 1) Minimize workdays
     model.Minimize(workdays)
     solver.parameters.max_time_in_seconds = 10.0
     solver.parameters.num_search_workers = 8
     r = solver.Solve(model)
+    statuses.append(_status_name(r))
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed to find a solution for objective 1")
     best_work = solver.Value(workdays)
@@ -202,6 +224,7 @@ def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     # 2) Minimize b2b
     model.Minimize(b2b_sum)
     r = solver.Solve(model)
+    statuses.append(_status_name(r))
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 2")
     best_b2b = solver.Value(b2b_sum)
@@ -210,6 +233,7 @@ def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     # 3) Minimize abs_diff
     model.Minimize(abs_diff)
     r = solver.Solve(model)
+    statuses.append(_status_name(r))
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 3")
     best_abs = solver.Value(abs_diff)
@@ -218,6 +242,7 @@ def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     # 4) Minimize large_days
     model.Minimize(large_days)
     r = solver.Solve(model)
+    statuses.append(_status_name(r))
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 4")
     best_large = solver.Value(large_days)
@@ -226,10 +251,11 @@ def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     # 5) Minimize single_pen
     model.Minimize(single_pen)
     r = solver.Solve(model)
+    statuses.append(_status_name(r))
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 5")
 
-    return best_work, best_b2b, best_abs, best_large, solver.Value(single_pen)
+    return best_work, best_b2b, best_abs, best_large, solver.Value(single_pen), statuses
 
 
 def solve_lex(plan: Plan) -> CPSATSolution:
@@ -238,7 +264,7 @@ def solve_lex(plan: Plan) -> CPSATSolution:
 
     model, x, obj_parts, final_close = _build_model(plan)
     solver = cp_model.CpSolver()
-    w, b2b, absd, large, sp = _solve_sequential_lex(model, obj_parts, solver)
+    w, b2b, absd, large, sp, statuses = _solve_sequential_lex(model, obj_parts, solver)
 
     # Extract actions
     actions: List[str] = []
@@ -256,6 +282,7 @@ def solve_lex(plan: Plan) -> CPSATSolution:
         actions=actions,
         objective=(w, b2b, absd, large, sp),
         final_closing_cents=final_cents,
+        statuses=statuses,
     )
     return sol
 
@@ -272,6 +299,7 @@ def verify_lex_optimal(plan: Plan, schedule_dp) -> VerificationReport:
             dp_actions=schedule_dp.actions,
             cp_actions=[],
             detail=f"CP-SAT error: {e}",
+            statuses=[],
         )
 
     ok = sol.objective == schedule_dp.objective
@@ -283,4 +311,5 @@ def verify_lex_optimal(plan: Plan, schedule_dp) -> VerificationReport:
         dp_actions=schedule_dp.actions,
         cp_actions=sol.actions,
         detail=detail,
+        statuses=sol.statuses,
     )

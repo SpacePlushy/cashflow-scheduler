@@ -70,6 +70,12 @@ def cmd_verify(
     report = verify_lex_optimal(plan, schedule)
     typer.echo("DP Objective:   " + str(schedule.objective))
     typer.echo("CP-SAT Objective: " + str(report.cp_obj))
+    if getattr(report, "statuses", None):
+        names = ["workdays", "b2b", "|Δ|", "large_days", "single_pen"]
+        typer.echo("Solver statuses:")
+        for i, s in enumerate(report.statuses):
+            label = names[i] if i < len(names) else f"part{i+1}"
+            typer.echo(f"- {label}: {s}")
     if report.ok:
         if report.dp_obj == report.cp_obj and report.dp_actions != report.cp_actions:
             typer.echo("Objectives match; actions differ (tie)")
