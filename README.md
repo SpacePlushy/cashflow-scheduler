@@ -2,28 +2,84 @@
 
 [![CI](https://github.com/SpacePlushy/cashflow-scheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/SpacePlushy/cashflow-scheduler/actions)
 
-A 30-day cash-flow scheduler that produces feasible, constraint-correct plans using a DP solver over integer cents. CLI provides `solve`, `show`, `export`, and `verify` (CP-SAT cross-check).
+30‑day cash‑flow scheduler with an exact Dynamic Programming (DP) solver over integer cents. Produces constraint‑correct monthly schedules and cross‑verifies optimality with CP‑SAT (OR‑Tools).
 
-Quick start:
+Highlights
+
+- Integer‑cents math for correctness and determinism
+- Hard constraints: non‑negative daily closings, Day‑1 Large, 7‑day Off‑Off window, Day‑30 pre‑rent guard, final balance band
+- Lexicographic objective: `(workdays, b2b, |final−target|, large_days, single_pen)`
+- Fast “resume from any day” via manual adjustment (API) or `solve_from()` helper (library)
+- Optional CP‑SAT verification and tie enumeration
+
+Quick Start
 
 - Ensure Python 3.11+
-- Place a `plan.json` in the project root (see example).
-- Run: `python3 -m cashflow.cli solve`
-- Verify (requires OR-Tools): `python3 -m cashflow.cli verify`
+- Place a `plan.json` in the project root (see example)
+- Solve: `python -m cashflow.cli solve`
+- Verify (needs OR‑Tools): `python -m cashflow.cli verify`
 
-This repository follows the high-level spec in `instructions.md`. Current scope includes the DP engine, ledger/validator, extensive tests (unit/property/regression), and a CP‑SAT cross‑verifier.
+How It Works
 
-## Web UI (Next.js)
+- Model and money
+  - All amounts are integer cents; `to_cents()`/`cents_to_str()` in `cashflow/core/model.py`.
+  - `Plan` holds inputs; `DayLedger`/`Schedule` capture the solved plan.
+- Ledger and validation
+  - `build_ledger(plan, actions)` constructs daily rows (opening → deposits → action net → bills → closing).
+  - `validate(plan, schedule)` checks: Day‑1 Large, non‑negativity, final band, Day‑30 pre‑rent guard, and Off‑Off in every 7‑day window.
+- DP solver (`cashflow/engines/dp.py`)
+  - State: `(last6_off_bits, prevWorked, workUsed, net)` and additive costs `(b2b, large_days, single_pen)`.
+  - Feasibility: rolling Off‑Off, non‑negativity, Day‑30 pre‑rent guard, optional locks, Day‑1 Large.
+  - Selection: choose final states within the band minimizing `(workUsed, b2b, |Δ|, large_days, single_pen)`.
+  - Helpers: `solve_from(plan, start_day)` re‑solves tail days by locking a prefix; internal flag `forbid_large_after_day1` exists but is not exposed via CLI.
+- CP‑SAT verifier (`cashflow/engines/cpsat.py`)
+  - Builds an equivalent model with one‑hot daily actions and sequential lexicographic minimization.
+  - `verify_lex_optimal(plan, dp_schedule)` compares DP vs CP‑SAT objectives; CLI shows per‑stage solver statuses.
+  - `enumerate_ties(plan, limit)` lists alternate optimal schedules (library API).
 
-The repository includes a Next.js app under `web/` designed for Vercel.
+CLI
+
+- Show: `python -m cashflow.cli show`
+- Solve + validate: `python -m cashflow.cli solve`
+- Set EOD and re-solve: `python -m cashflow.cli set-eod <day> <amount>`
+- Export: `python -m cashflow.cli export --format md --out schedule.md`
+- Verify with CP‑SAT: `python -m cashflow.cli verify`
+- All commands default to `./plan.json`; pass a custom path as an argument.
+
+API (local dev)
+
+- Install: `pip install -r api/requirements.txt` (use a venv)
+- Run: `uvicorn api.index:app --reload`
+- Endpoints
+  - `GET /health`
+  - `POST /solve` — returns actions, objective, ledger, validation checks
+  - `POST /set_eod` — resume‑from‑day via end‑of‑day override `{ "day": 12, "eod_amount": 250.00 }`
+  - `POST /export` — `{ "format": "md"|"csv"|"json" }` → rendered schedule
+
+Web UI (Next.js)
 
 - Dev: `cd web && npm install && npm run dev` (http://localhost:3000)
-- API base: set `NEXT_PUBLIC_API_BASE` (optional). Defaults to `http://127.0.0.1:8000` on localhost, or `/api/index` in production.
-- Build: `npm run build` inside `web/`.
+- API base: `NEXT_PUBLIC_API_BASE` (defaults to `http://127.0.0.1:8000` locally)
+- Build: `npm run build` inside `web/`
 
-### Vercel Deploy
+Build, Test, Type, Lint
 
-- Easiest: Create two Vercel projects
-  - UI project → Root Directory: `web/` (Next auto-detected)
-  - API project → Root Directory: repo root, Python Serverless Functions under `api/` (e.g., `api/health.py`)
-  - In the UI project, set `NEXT_PUBLIC_API_BASE` to the API project URL (e.g., `https://<api>.vercel.app/api/index`).
+- Install deps: `make setup`
+- Tests: `make test`
+- Lint/format: `make lint` / `make format`
+- Types: `make type`
+- CP‑SAT verify: `make verify`
+
+Plan File
+
+- Example at `./plan.json`. Loader: `cashflow/io/store.py`.
+- Important fields: `start_balance`, `target_end`, `band`, `rent_guard`, `deposits[]`, `bills[]`, `actions[30]` (locks/prefills), optional `manual_adjustments[]`.
+
+Changelog Highlights
+
+- DP: added `solve_from()` and internal `forbid_large_after_day1` flag; refined Off‑Off/window handling and pruning.
+- CP‑SAT: sequential lexicographic verify with per‑stage statuses; `enumerate_ties()` for alternate optimal schedules.
+- API: `/solve`, `/set_eod`, `/export` with CORS; split serverless `api/` deps from root to slim deploys.
+- Packaging/CI: editable installs fixed; mypy typing tightened; Makefile smoke targets and Vercel/Fly helpers added.
+
+See `instructions.md` for a deeper developer guide and algorithmic notes.

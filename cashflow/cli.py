@@ -6,9 +6,11 @@ import typer
 
 from .io.store import load_plan
 from .engines.dp import solve as dp_solve
+from .core.ledger import build_ledger
 from .core.validate import validate
 from .engines.cpsat import verify_lex_optimal
 from .io.render import render_markdown
+from .core.model import Adjustment, to_cents
 
 app = typer.Typer(help="30-Day Cash-Flow Scheduler")
 
@@ -84,6 +86,66 @@ def cmd_verify(
     else:
         typer.echo(report.detail)
         raise typer.Exit(code=2)
+
+
+@app.command("set-eod")
+def cmd_set_eod(
+    day: int = typer.Argument(..., help="Day index (1..30) to set EOD for"),
+    eod_amount: float = typer.Argument(..., help="Desired end-of-day balance (e.g., 167.00)"),
+    plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json (defaults to CWD)"),
+    save_plan: Optional[str] = typer.Option(None, help="Optional path to write updated plan JSON"),
+):
+    """Adjust the plan so that Day `day` closes at `eod_amount`, lock days 1..day,
+    and re-solve the remainder. Prints the new schedule and validation report.
+
+    Mirrors the serverless API's /set_eod endpoint.
+    """
+    if not (1 <= day <= 30):
+        typer.echo("day must be in 1..30", err=True)
+        raise typer.Exit(code=2)
+
+    path = Path(plan_path) if plan_path else _default_plan_path()
+    plan = load_plan(path)
+
+    baseline = dp_solve(plan)
+    base_ledger = build_ledger(plan, baseline.actions)
+    current_eod = base_ledger[day - 1].closing_cents
+    desired_cents = to_cents(eod_amount)
+    delta = desired_cents - current_eod
+
+    # Lock prefix actions and append manual adjustment
+    plan.actions = baseline.actions[:day] + [None] * (30 - day)
+    plan.manual_adjustments = list(plan.manual_adjustments) + [
+        Adjustment(day=day, amount_cents=delta, note="cli set-eod"),
+    ]
+
+    schedule = dp_solve(plan)
+    report = validate(plan, schedule)
+
+    typer.echo(render_markdown(schedule))
+    typer.echo("")
+    typer.echo("Validation:")
+    for name, ok, detail in report.checks:
+        typer.echo(f"- {name}: {'[x]' if ok else '[ ]'} {detail}")
+    if not report.ok:
+        raise typer.Exit(code=2)
+    if save_plan:
+        # Persist an updated plan JSON with merged actions/adjustments
+        try:
+            import json
+
+            data = json.loads(Path(path).read_text())
+            data["actions"] = plan.actions
+            madj = list(data.get("manual_adjustments", []))
+            # Amount is delta in dollars
+            madj.append({"day": day, "amount": delta / 100.0, "note": "cli set-eod"})
+            data["manual_adjustments"] = madj
+            Path(save_plan).write_text(json.dumps(data, indent=2))
+            typer.echo(f"Wrote {save_plan}")
+        except Exception as e:
+            typer.echo(f"Failed to write updated plan: {e}", err=True)
+            raise typer.Exit(code=2)
+
 
 
 def main():
