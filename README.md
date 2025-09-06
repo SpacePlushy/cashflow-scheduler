@@ -42,6 +42,7 @@ CLI
 - Show: `python -m cashflow.cli show`
 - Solve + validate: `python -m cashflow.cli solve`
 - Set EOD and re-solve: `python -m cashflow.cli set-eod <day> <amount>`
+- Calendar wallpaper (PNG): `python -m cashflow.cli calendar --width 3840 --height 2160 --theme dark`
 - Export: `python -m cashflow.cli export --format md --out schedule.md`
 - Verify with CP‑SAT: `python -m cashflow.cli verify`
 - All commands default to `./plan.json`; pass a custom path as an argument.
@@ -57,6 +58,14 @@ Troubleshooting
 
 - `python` vs `python3`: these may be different interpreters with different site‑packages. If `python -m pytest` fails but `python3 -m pytest` works, install missing deps for your `python` (e.g., `python -m pip install --user --break-system-packages pytest ortools`) or use the repo venv (`.venv/bin/python -m pytest`).
 - OR‑Tools for verify: the `verify` command requires OR‑Tools. If unavailable, `verify` exits non‑zero. Install it for your interpreter: `python -m pip install --user --break-system-packages 'ortools>=9.8'`.
+
+Calendar Export
+
+- Writes a high-resolution PNG to `~/Downloads/cashflow_calendar.png` by default.
+- Options:
+  - `--width/--height`: set image resolution (e.g., 3840×2160 for 4K).
+  - `--theme dark|light`.
+  - `--out <path>`: custom output path.
 
 API (local dev)
 

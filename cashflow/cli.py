@@ -1,4 +1,6 @@
 from __future__ import annotations
+import os
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -9,7 +11,8 @@ from .engines.dp import solve as dp_solve
 from .core.ledger import build_ledger
 from .core.validate import validate
 from .engines.cpsat import verify_lex_optimal
-from .io.render import render_markdown
+from .io.render import render_markdown, build_rich_table
+from .io.calendar import render_calendar_png
 from .core.model import Adjustment, to_cents
 
 app = typer.Typer(help="30-Day Cash-Flow Scheduler")
@@ -27,7 +30,18 @@ def cmd_solve(
     plan = load_plan(path)
     schedule = dp_solve(plan)
     report = validate(plan, schedule)
-    typer.echo(render_markdown(schedule))
+    printed = False
+    if sys.stdout.isatty() and os.environ.get("CF_FORCE_MARKDOWN") != "1":
+        try:
+            from rich.console import Console
+
+            console = Console()
+            console.print(build_rich_table(schedule))
+            printed = True
+        except Exception:
+            printed = False
+    if not printed:
+        typer.echo(render_markdown(schedule))
     typer.echo("")
     typer.echo("Validation:")
     for name, ok, detail in report.checks:
@@ -41,7 +55,17 @@ def cmd_show(plan_path: Optional[str] = typer.Argument(None, help="Path to plan.
     path = Path(plan_path) if plan_path else _default_plan_path()
     plan = load_plan(path)
     schedule = dp_solve(plan)
-    typer.echo(render_markdown(schedule))
+    printed = False
+    if sys.stdout.isatty() and os.environ.get("CF_FORCE_MARKDOWN") != "1":
+        try:
+            from rich.console import Console
+
+            Console().print(build_rich_table(schedule))
+            printed = True
+        except Exception:
+            printed = False
+    if not printed:
+        typer.echo(render_markdown(schedule))
 
 
 @app.command("export")
@@ -127,8 +151,17 @@ def cmd_set_eod(
 
     schedule = dp_solve(plan)
     report = validate(plan, schedule)
+    printed = False
+    if sys.stdout.isatty() and os.environ.get("CF_FORCE_MARKDOWN") != "1":
+        try:
+            from rich.console import Console
 
-    typer.echo(render_markdown(schedule))
+            Console().print(build_rich_table(schedule))
+            printed = True
+        except Exception:
+            printed = False
+    if not printed:
+        typer.echo(render_markdown(schedule))
     typer.echo("")
     typer.echo("Validation:")
     for name, ok, detail in report.checks:
@@ -151,6 +184,30 @@ def cmd_set_eod(
         except Exception as e:
             typer.echo(f"Failed to write updated plan: {e}", err=True)
             raise typer.Exit(code=2)
+
+
+@app.command("calendar")
+def cmd_calendar(
+    plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json"),
+    out: Optional[str] = typer.Option(None, help="Output PNG path (default: ~/Downloads/cashflow_calendar.png)"),
+    width: int = typer.Option(3840, help="Image width (px)"),
+    height: int = typer.Option(2160, help="Image height (px)"),
+    theme: str = typer.Option("dark", help="Theme: dark|light"),
+):
+    """Generate a high-resolution calendar PNG for wallpaper use."""
+    path = Path(plan_path) if plan_path else _default_plan_path()
+    plan = load_plan(path)
+    schedule = dp_solve(plan)
+
+    out_path = (
+        Path(out).expanduser() if out else Path.home() / "Downloads" / "cashflow_calendar.png"
+    )
+    try:
+        render_calendar_png(schedule, out_path, size=(width, height), theme=theme)
+    except RuntimeError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(code=2)
+    typer.echo(f"Wrote {out_path}")
 
 
 def main():

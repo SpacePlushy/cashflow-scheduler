@@ -63,3 +63,33 @@ def render_json(schedule: Schedule) -> str:
         ],
     }
     return json.dumps(obj, separators=(",", ":"))
+
+
+def build_rich_table(schedule: Schedule):  # pragma: no cover - UI convenience
+    """Return a Rich Table for interactive terminals.
+
+    Requires `rich`. Callers should catch ImportError and fall back to
+    `render_markdown` when unavailable.
+    """
+    from rich.table import Table
+
+    table = Table(show_header=True, header_style="bold", expand=False, box=None)
+    table.add_column("Day", justify="right", no_wrap=True)
+    table.add_column("Opening", justify="right", no_wrap=True)
+    table.add_column("Deposits", justify="right", no_wrap=True)
+    table.add_column("Action", justify="center", no_wrap=True)
+    table.add_column("Net", justify="right", no_wrap=True)
+    table.add_column("Bills", justify="right", no_wrap=True)
+    table.add_column("Closing", justify="right", no_wrap=True)
+
+    for row in schedule.ledger:
+        table.add_row(
+            str(row.day),
+            cents_to_str(row.opening_cents),
+            cents_to_str(row.deposit_cents),
+            row.action,
+            cents_to_str(row.net_cents),
+            cents_to_str(row.bills_cents),
+            cents_to_str(row.closing_cents),
+        )
+    return table
