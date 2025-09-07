@@ -52,7 +52,8 @@ def render_calendar_png(
         ) from e
 
     width, height = size
-    scale = max(0.6, min(1.6, width / 3840))
+    # Global header scale based on overall width
+    scale = max(0.5, min(1.4, width / 3840))
 
     # Colors
     bg = (12, 14, 18) if theme == "dark" else (245, 246, 250)
@@ -74,14 +75,15 @@ def render_calendar_png(
     cell_w = (width - 2 * margin - (cols - 1) * grid_gap) // cols
     cell_h = (height - 2 * margin - (rows - 1) * grid_gap) // rows
 
-    # Fonts
-    title_font = _load_font(int(96 * scale))
-    obj_font = _load_font(int(38 * scale))
-    wday_font = _load_font(int(44 * scale))
-    day_font = _load_font(int(52 * scale))
-    badge_font = _load_font(int(34 * scale))
-    small_font = _load_font(int(30 * scale))
-    close_font = _load_font(int(64 * scale))
+    # Fonts (header uses global scale; cells use per-cell scale)
+    cs = max(0.5, min(1.2, min(cell_w, cell_h) / 260))
+    title_font = _load_font(int(88 * scale))
+    obj_font = _load_font(int(30 * scale))
+    wday_font = _load_font(int(36 * scale))
+    day_font = _load_font(int(40 * cs))
+    badge_font = _load_font(int(22 * cs))
+    small_font = _load_font(int(20 * cs))
+    close_font = _load_font(int(42 * cs))
 
     img = Image.new("RGB", (width, height), color=bg)
     draw = ImageDraw.Draw(img)
@@ -108,14 +110,14 @@ def render_calendar_png(
         f"final={cents_to_str(schedule.final_closing_cents)}"
     )
     wo, ho = text_size(obj_line, obj_font)
-    obj_y = header_y + ht // 2 + int(10 * scale) + ho // 2
+    obj_y = header_y + ht // 2 + int(6 * scale) + ho // 2
     try:
         draw.text((cx, obj_y), obj_line, fill=sub, font=obj_font, anchor="mm")
     except TypeError:
         draw.text((cx - wo / 2, obj_y - ho / 2), obj_line, fill=sub, font=obj_font)
 
     # Weekday header
-    y_labels = obj_y + ho // 2 + int(24 * scale)
+    y_labels = obj_y + ho // 2 + int(16 * scale)
     headers = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     for i, name in enumerate(headers):
         x = margin + i * (cell_w + grid_gap) + cell_w // 2
@@ -125,7 +127,7 @@ def render_calendar_png(
             ww, hh = text_size(name, wday_font)
             draw.text((x - ww / 2, y_labels - hh / 2), name, fill=sub, font=wday_font)
 
-    grid_top = y_labels + text_size("Sun", wday_font)[1] // 2 + int(26 * scale)
+    grid_top = y_labels + text_size("Sun", wday_font)[1] // 2 + int(18 * scale)
 
     def draw_badge(x1: int, y1: int, text: str, stroke: Tuple[int, int, int]):
         x2 = x1 + int(70 * scale)
@@ -168,23 +170,23 @@ def render_calendar_png(
             text_col = fg
         else:
             fill, text_col = off_fill, sub
-        draw.rounded_rectangle([x0, y0, x1, y1], radius=int(22 * scale), fill=fill)
+        draw.rounded_rectangle([x0, y0, x1, y1], radius=int(16 * cs), fill=fill)
 
-        pad = int(16 * scale)
+        pad = int(12 * cs)
         # Day number
         draw.text((x0 + pad, y0 + pad), str(d), fill=text_col, font=day_font)
 
         # Action badge
         if row:
-            draw_badge(x1 - pad - int(70 * scale), y0 + pad, row.action, text_col)
+            draw_badge(x1 - pad - int(60 * cs), y0 + pad, row.action, text_col)
 
         # Info lines (up to 3)
         if row:
             lines: List[str] = []
             if row.net_cents:
-                lines.append(f"Payout {cents_to_str(row.net_cents)}")
+                lines.append(f"Pay {cents_to_str(row.net_cents)}")
             if row.deposit_cents:
-                lines.append(f"Deposits {cents_to_str(row.deposit_cents)}")
+                lines.append(f"Deps {cents_to_str(row.deposit_cents)}")
             items = bills_by_day.get(d, []) if bills_by_day else []
             if items:
                 nm, amt = items[0]
@@ -193,9 +195,9 @@ def render_calendar_png(
                 lines.append(f"… +{len(items) - 1} more")
 
             avail_w = x1 - x0 - 2 * pad
-            yy = y0 + pad + int(50 * scale)
-            lh = int(30 * scale)
-            for i, t in enumerate(lines[:3]):
+            yy = y0 + pad + int(40 * cs)
+            lh = int(24 * cs)
+            for i, t in enumerate(lines[:2]):
                 s = t
                 while text_size(s, small_font)[0] > avail_w and len(s) > 2:
                     s = s[:-2] + "…"
