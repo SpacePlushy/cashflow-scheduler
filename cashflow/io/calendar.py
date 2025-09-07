@@ -73,6 +73,8 @@ def render_calendar_png(
     cols = 7
     rows = (offset + num_days + cols - 1) // cols
     cell_w = (width - 2 * margin - (cols - 1) * grid_gap) // cols
+    # cell_h will be computed AFTER header/labels are laid out so nothing gets
+    # cut off. Initialize to a placeholder for now.
     cell_h = (height - 2 * margin - (rows - 1) * grid_gap) // rows
 
     # Fonts (header uses global scale; cells use per-cell scale)
@@ -80,10 +82,8 @@ def render_calendar_png(
     title_font = _load_font(int(88 * scale))
     obj_font = _load_font(int(30 * scale))
     wday_font = _load_font(int(36 * scale))
-    day_font = _load_font(int(40 * cs))
-    badge_font = _load_font(int(22 * cs))
-    small_font = _load_font(int(20 * cs))
-    close_font = _load_font(int(42 * cs))
+    # Per-cell fonts will be created after we compute final cell_h below.
+    day_font = badge_font = small_font = close_font = _load_font(12)
 
     img = Image.new("RGB", (width, height), color=bg)
     draw = ImageDraw.Draw(img)
@@ -128,6 +128,14 @@ def render_calendar_png(
             draw.text((x - ww / 2, y_labels - hh / 2), name, fill=sub, font=wday_font)
 
     grid_top = y_labels + text_size("Sun", wday_font)[1] // 2 + int(18 * scale)
+    # Recompute cell_h based on remaining vertical space to avoid bottom cutoff
+    avail_h = height - grid_top - margin
+    cell_h = max(100, (avail_h - (rows - 1) * grid_gap) // rows)
+    cs = max(0.5, min(1.2, min(cell_w, cell_h) / 260))
+    day_font = _load_font(int(40 * cs))
+    badge_font = _load_font(int(22 * cs))
+    small_font = _load_font(int(20 * cs))
+    close_font = _load_font(int(42 * cs))
 
     def draw_badge(x1: int, y1: int, text: str, stroke: Tuple[int, int, int]):
         x2 = x1 + int(70 * scale)
