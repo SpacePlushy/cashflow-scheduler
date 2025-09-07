@@ -86,8 +86,9 @@ def render_calendar_png(
 
     # Header: Month name and small objective summary
     month_title = f"{_cal.month_name[now.month]} {now.year}"
-    w_title, _ = _wh(month_title, title_font)
-    draw.text((margin, margin // 2), month_title, fill=fg, font=title_font)
+    w_title, h_title = _wh(month_title, title_font)
+    header_y = margin // 2
+    draw.text((margin, header_y), month_title, fill=fg, font=title_font)
 
     w, b2b, delta, large, sp = schedule.objective
     subtitle = (
@@ -95,12 +96,17 @@ def render_calendar_png(
         f"L={large}  pen={sp}  final={cents_to_str(schedule.final_closing_cents)}"
     )
     draw.text(
-        (margin + w_title + 24, margin // 2 + 12), subtitle, fill=sub, font=label_font
+        (margin + w_title + 24, header_y + h_title // 2),
+        subtitle,
+        fill=sub,
+        font=label_font,
     )
 
     # Weekday labels (Sun..Sat)
     headers = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    y_labels = margin + 24
+    # Vertical layout: place weekday labels below the header title line
+    _, h_label = _wh("Sun", label_font)
+    y_labels = header_y + h_title + 16
     for c, name in enumerate(headers):
         x_center = margin + c * (cell_w + grid_gap) + cell_w // 2
         try:
@@ -121,7 +127,9 @@ def render_calendar_png(
         r = (offset + (day - 1)) // cols
         c = (offset + (day - 1)) % cols
         x0 = margin + c * (cell_w + grid_gap)
-        y0 = margin + 60 + r * (cell_h + grid_gap)
+        # Start grid below weekday labels with some extra spacing
+        grid_top = y_labels + h_label // 2 + 24
+        y0 = grid_top + r * (cell_h + grid_gap)
         x1 = x0 + cell_w
         y1 = y0 + cell_h
 
