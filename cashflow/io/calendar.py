@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from datetime import datetime
+import calendar as _cal
 
 from ..core.model import Schedule, cents_to_str
 
@@ -45,7 +47,14 @@ def render_calendar_png(
     sub = (180, 188, 201) if theme == "dark" else (60, 68, 80)
     grid_gap = 24
     margin = 80
-    cols, rows = 6, 5
+    # Determine real calendar grid for the current month (7 columns)
+    now = datetime.now()
+    first_wkday, num_days = _cal.monthrange(now.year, now.month)  # Mon=0..Sun=6
+    # Offset so Sunday is first column
+    offset = (first_wkday + 1) % 7
+    total_cells = offset + num_days
+    cols = 7
+    rows = (total_cells + cols - 1) // cols
     cell_w = (width - 2 * margin - (cols - 1) * grid_gap) // cols
     cell_h = (height - 2 * margin - (rows - 1) * grid_gap) // rows
 
@@ -89,17 +98,24 @@ def render_calendar_png(
         (margin + w_title + 24, margin // 2 + 12), subtitle, fill=sub, font=label_font
     )
 
-    # Cells
-    for row in schedule.ledger:
-        day = row.day
-        r = (day - 1) // cols
-        c = (day - 1) % cols
+    # Cells, aligned to month rows of 7
+    for day in range(1, num_days + 1):
+        r = (offset + (day - 1)) // cols
+        c = (offset + (day - 1)) % cols
         x0 = margin + c * (cell_w + grid_gap)
         y0 = margin + 60 + r * (cell_h + grid_gap)
         x1 = x0 + cell_w
         y1 = y0 + cell_h
 
-        fill, txt = action_colors.get(row.action, ((70, 70, 70), fg))
+        row = schedule.ledger[day - 1] if day - 1 < len(schedule.ledger) else None
+        if row is not None:
+            fill, txt = action_colors.get(row.action, ((70, 70, 70), fg))
+        else:
+            fill, txt = (
+                ((48, 52, 61), sub)
+                if theme == "dark"
+                else ((230, 232, 238), (120, 128, 138))
+            )
         draw.rounded_rectangle([x0, y0, x1, y1], radius=24, fill=fill)
 
         pad = 18
@@ -107,27 +123,28 @@ def render_calendar_png(
         draw.text((x0 + pad, y0 + pad), f"{day}", fill=txt, font=num_font)
 
         # Action badge (top-right), keep generous margins to avoid clipping
-        tag = row.action
-        tw, th = _wh(tag, label_font)
-        badge_margin = max(24, int(min(cell_w, cell_h) * 0.03))
-        inner_pad_x, inner_pad_y = 18, 12
-        bx2 = x1 - badge_margin
-        bx1 = bx2 - (tw + inner_pad_x * 2)
-        by1 = y0 + badge_margin
-        by2 = by1 + (th + inner_pad_y * 2)
-        radius = int((th + inner_pad_y * 2) / 2)
-        draw.rounded_rectangle(
-            [bx1, by1, bx2, by2], radius=radius, outline=txt, width=3
-        )
-        # Center the text within the badge using the text bbox center.
-        cx = (bx1 + bx2) / 2
-        cy = (by1 + by2) / 2
-        try:
-            # Pillow >=8 supports anchor; 'mm' = middle/middle.
-            draw.text((cx, cy), tag, fill=txt, font=label_font, anchor="mm")
-        except TypeError:
-            # Fallback: compute top-left such that bbox is centered.
-            draw.text((cx - tw / 2, cy - th / 2), tag, fill=txt, font=label_font)
+        if row is not None:
+            tag = row.action
+            tw, th = _wh(tag, label_font)
+            badge_margin = max(24, int(min(cell_w, cell_h) * 0.03))
+            inner_pad_x, inner_pad_y = 18, 12
+            bx2 = x1 - badge_margin
+            bx1 = bx2 - (tw + inner_pad_x * 2)
+            by1 = y0 + badge_margin
+            by2 = by1 + (th + inner_pad_y * 2)
+            radius = int((th + inner_pad_y * 2) / 2)
+            draw.rounded_rectangle(
+                [bx1, by1, bx2, by2], radius=radius, outline=txt, width=3
+            )
+            # Center the text within the badge using the text bbox center.
+            cx = (bx1 + bx2) / 2
+            cy = (by1 + by2) / 2
+            try:
+                # Pillow >=8 supports anchor; 'mm' = middle/middle.
+                draw.text((cx, cy), tag, fill=txt, font=label_font, anchor="mm")
+            except TypeError:
+                # Fallback: compute top-left such that bbox is centered.
+                draw.text((cx - tw / 2, cy - th / 2), tag, fill=txt, font=label_font)
 
         # Metrics column layout (labels + values), no spaces for alignment.
         y = y0 + pad + 78
@@ -135,15 +152,22 @@ def render_calendar_png(
         col_gap = max(120, min(220, cell_w // 3))
         value_x = x0 + pad + col_gap
 
-        def _row(lbl: str, val: str, y: int):
+        def _row(lbl: str, val: str, y: int, active=True):
             draw.text((label_x, y), lbl, fill=sub, font=small_font)
-            draw.text((value_x, y), val, fill=txt, font=small_font)
+            draw.text((value_x, y), val, fill=(txt if active else sub), font=small_font)
 
-        _row("Payout", cents_to_str(row.net_cents), y)
-        y += 34
-        _row("Deposits", cents_to_str(row.deposit_cents), y)
-        y += 34
-        _row("Bills", cents_to_str(row.bills_cents), y)
+        if row is not None:
+            _row("Payout", cents_to_str(row.net_cents), y)
+            y += 34
+            _row("Deposits", cents_to_str(row.deposit_cents), y)
+            y += 34
+            _row("Bills", cents_to_str(row.bills_cents), y)
+        else:
+            _row("Payout", "—", y, active=False)
+            y += 34
+            _row("Deposits", "—", y, active=False)
+            y += 34
+            _row("Bills", "—", y, active=False)
 
         # Itemize bill names for the day (up to 3 lines), then a "+N more" line
         if bills_by_day and bills_by_day.get(day):
@@ -183,9 +207,10 @@ def render_calendar_png(
                     font=small_font,
                 )
 
-        close = cents_to_str(row.closing_cents)
-        cw, ch = _wh(close, close_font)
-        draw.text((x1 - pad - cw, y1 - pad - ch), close, fill=txt, font=close_font)
+        if row is not None:
+            close = cents_to_str(row.closing_cents)
+            cw, ch = _wh(close, close_font)
+            draw.text((x1 - pad - cw, y1 - pad - ch), close, fill=txt, font=close_font)
 
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     img.save(str(out_path), format="PNG", optimize=True)
