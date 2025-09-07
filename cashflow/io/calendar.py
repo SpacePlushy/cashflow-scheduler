@@ -42,6 +42,7 @@ def render_calendar_png(
         ) from e
 
     width, height = size
+    scale = max(0.6, min(1.5, width / 3840))
     bg = (12, 14, 18) if theme == "dark" else (245, 246, 250)
     fg = (235, 238, 243) if theme == "dark" else (20, 22, 26)
     sub = (180, 188, 201) if theme == "dark" else (60, 68, 80)
@@ -71,11 +72,13 @@ def render_calendar_png(
 
     # Fonts
     try:
-        title_font = _try_load_font(64)
-        label_font = _try_load_font(36)
-        small_font = _try_load_font(28)
-        num_font = _try_load_font(52)
-        close_font = _try_load_font(60)
+        title_font = _try_load_font(int(84 * scale))
+        sub_font = _try_load_font(int(36 * scale))
+        wday_font = _try_load_font(int(40 * scale))
+        label_font = _try_load_font(int(34 * scale))
+        small_font = _try_load_font(int(26 * scale))
+        num_font = _try_load_font(int(50 * scale))
+        close_font = _try_load_font(int(60 * scale))
     except Exception as e:
         raise RuntimeError("Pillow fonts not available") from e
 
@@ -87,39 +90,50 @@ def render_calendar_png(
     # Header: Month name and small objective summary
     month_title = f"{_cal.month_name[now.month]} {now.year}"
     w_title, h_title = _wh(month_title, title_font)
-    header_y = margin // 2
-    draw.text((margin, header_y), month_title, fill=fg, font=title_font)
+    center_x = width // 2
+    header_y = margin // 2 + h_title // 2
+    try:
+        draw.text(
+            (center_x, header_y), month_title, fill=fg, font=title_font, anchor="mm"
+        )
+    except TypeError:
+        draw.text(
+            (center_x - w_title / 2, header_y - h_title / 2),
+            month_title,
+            fill=fg,
+            font=title_font,
+        )
 
     w, b2b, delta, large, sp = schedule.objective
     subtitle = (
         f"work={w}  b2b={b2b}  |Δ|={cents_to_str(delta)}  "
         f"L={large}  pen={sp}  final={cents_to_str(schedule.final_closing_cents)}"
     )
-    draw.text(
-        (margin + w_title + 24, header_y + h_title // 2),
-        subtitle,
-        fill=sub,
-        font=label_font,
-    )
+    w_sub, h_sub = _wh(subtitle, sub_font)
+    sub_y = header_y + h_title // 2 + int(8 * scale) + h_sub // 2
+    try:
+        draw.text((center_x, sub_y), subtitle, fill=sub, font=sub_font, anchor="mm")
+    except TypeError:
+        draw.text(
+            (center_x - w_sub / 2, sub_y - h_sub / 2), subtitle, fill=sub, font=sub_font
+        )
 
     # Weekday labels (Sun..Sat)
     headers = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    # Vertical layout: place weekday labels below the header title line
-    _, h_label = _wh("Sun", label_font)
-    y_labels = header_y + h_title + 16
+    # Vertical layout: place weekday labels below the objective line
+    _, h_label = _wh("Sun", wday_font)
+    y_labels = sub_y + h_sub // 2 + int(16 * scale)
     for c, name in enumerate(headers):
         x_center = margin + c * (cell_w + grid_gap) + cell_w // 2
         try:
-            draw.text(
-                (x_center, y_labels), name, fill=sub, font=label_font, anchor="mm"
-            )
+            draw.text((x_center, y_labels), name, fill=sub, font=wday_font, anchor="mm")
         except TypeError:
-            wlbl, hlbl = _wh(name, label_font)
+            wlbl, hlbl = _wh(name, wday_font)
             draw.text(
                 (x_center - wlbl / 2, y_labels - hlbl / 2),
                 name,
                 fill=sub,
-                font=label_font,
+                font=wday_font,
             )
 
     # Cells, aligned to month rows of 7
@@ -128,7 +142,7 @@ def render_calendar_png(
         c = (offset + (day - 1)) % cols
         x0 = margin + c * (cell_w + grid_gap)
         # Start grid below weekday labels with some extra spacing
-        grid_top = y_labels + h_label // 2 + 24
+        grid_top = y_labels + h_label // 2 + int(24 * scale)
         y0 = grid_top + r * (cell_h + grid_gap)
         x1 = x0 + cell_w
         y1 = y0 + cell_h
