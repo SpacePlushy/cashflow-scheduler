@@ -84,10 +84,10 @@ def render_calendar_png(
         bbox = draw.textbbox((0, 0), text, font=font)
         return bbox[2] - bbox[0], bbox[3] - bbox[1]
 
-    # Header
-    title = "Cashflow Schedule"
-    w_title, _ = _wh(title, title_font)
-    draw.text((margin, margin // 2), title, fill=fg, font=title_font)
+    # Header: Month name and small objective summary
+    month_title = f"{_cal.month_name[now.month]} {now.year}"
+    w_title, _ = _wh(month_title, title_font)
+    draw.text((margin, margin // 2), month_title, fill=fg, font=title_font)
 
     w, b2b, delta, large, sp = schedule.objective
     subtitle = (
@@ -97,6 +97,24 @@ def render_calendar_png(
     draw.text(
         (margin + w_title + 24, margin // 2 + 12), subtitle, fill=sub, font=label_font
     )
+
+    # Weekday labels (Sun..Sat)
+    headers = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    y_labels = margin + 24
+    for c, name in enumerate(headers):
+        x_center = margin + c * (cell_w + grid_gap) + cell_w // 2
+        try:
+            draw.text(
+                (x_center, y_labels), name, fill=sub, font=label_font, anchor="mm"
+            )
+        except TypeError:
+            wlbl, hlbl = _wh(name, label_font)
+            draw.text(
+                (x_center - wlbl / 2, y_labels - hlbl / 2),
+                name,
+                fill=sub,
+                font=label_font,
+            )
 
     # Cells, aligned to month rows of 7
     for day in range(1, num_days + 1):
