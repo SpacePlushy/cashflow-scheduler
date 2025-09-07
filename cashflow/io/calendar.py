@@ -186,64 +186,39 @@ def render_calendar_png(
                 # Fallback: compute top-left such that bbox is centered.
                 draw.text((cx - tw / 2, cy - th / 2), tag, fill=txt, font=label_font)
 
-        # Metrics column layout (labels + values), no spaces for alignment.
-        y = y0 + pad + 78
-        label_x = x0 + pad
-        col_gap = max(120, min(220, cell_w // 3))
-        value_x = x0 + pad + col_gap
+        # Compact info lines: payout / deposits / one or two bills
+        info_y = y0 + pad + int(56 * scale)
+        text_x = x0 + pad
 
-        def _row(lbl: str, val: str, y: int, active=True):
-            draw.text((label_x, y), lbl, fill=sub, font=small_font)
-            draw.text((value_x, y), val, fill=(txt if active else sub), font=small_font)
+        def ellipsize(text: str, font, max_w: int) -> str:
+            if draw.textbbox((0, 0), text, font=font)[2] <= max_w:
+                return text
+            ell = "…"
+            s = text
+            while s and draw.textbbox((0, 0), s + ell, font=font)[2] > max_w:
+                s = s[:-1]
+            return (s + ell) if s else ell
 
         if row is not None:
-            _row("Payout", cents_to_str(row.net_cents), y)
-            y += 34
-            _row("Deposits", cents_to_str(row.deposit_cents), y)
-            y += 34
-            _row("Bills", cents_to_str(row.bills_cents), y)
-        else:
-            _row("Payout", "—", y, active=False)
-            y += 34
-            _row("Deposits", "—", y, active=False)
-            y += 34
-            _row("Bills", "—", y, active=False)
+            avail_w = x1 - pad - text_x
+            line_h = int(28 * scale)
+            lines = []
+            if row.net_cents:
+                lines.append((f"Payout {cents_to_str(row.net_cents)}", txt))
+            if row.deposit_cents:
+                lines.append((f"Deposits {cents_to_str(row.deposit_cents)}", txt))
+            bill_items = bills_by_day.get(day, []) if bills_by_day else []
+            for name, amt in bill_items[:2]:
+                lines.append((f"• {name} {cents_to_str(amt)}", txt))
+            extra = max(0, len(bill_items) - 2)
+            if extra:
+                lines.append((f"… +{extra} more", sub))
 
-        # Itemize bill names for the day (up to 3 lines), then a "+N more" line
-        if bills_by_day and bills_by_day.get(day):
-            items = bills_by_day[day]
-
-            def ellipsize(text: str, font, max_w: int) -> str:
-                if draw.textbbox((0, 0), text, font=font)[2] <= max_w:
-                    return text
-                # Add ellipsis until it fits
-                ell = "…"
-                s = text
-                while s and draw.textbbox((0, 0), s + ell, font=font)[2] > max_w:
-                    s = s[:-1]
-                return (s + ell) if s else ell
-
-            max_lines = 3
-            line_count = 0
-            list_x = label_x + 8
-            avail_w = x1 - pad - list_x
-            for name, amt in items:
-                if line_count >= max_lines:
-                    break
-                txt_line = f"• {name}  {cents_to_str(amt)}"
+            for i, (text_line, color) in enumerate(lines[:3]):
                 draw.text(
-                    (list_x, y + 36 + 4 + 28 * line_count),
-                    ellipsize(txt_line, small_font, avail_w),
-                    fill=txt,
-                    font=small_font,
-                )
-                line_count += 1
-            extra = len(items) - line_count
-            if extra > 0:
-                draw.text(
-                    (list_x, y + 36 + 4 + 28 * line_count),
-                    f"… +{extra} more",
-                    fill=sub,
+                    (text_x, info_y + i * line_h),
+                    ellipsize(text_line, small_font, avail_w),
+                    fill=color,
                     font=small_font,
                 )
 
