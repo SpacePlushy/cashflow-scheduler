@@ -22,12 +22,27 @@ def _default_plan_path() -> Path:
     return Path.cwd() / "plan.json"
 
 
+def _load_plan_or_exit(path: Path):
+    try:
+        return load_plan(path)
+    except FileNotFoundError:
+        typer.secho(f"Plan file not found: {path}", fg=typer.colors.RED)
+        typer.secho(
+            "Hint: run from the repo root or pass a path, e.g.\n  python -m cashflow.cli solve path/to/plan.json",
+            fg=typer.colors.YELLOW,
+        )
+        raise typer.Exit(code=2)
+    except Exception as e:  # noqa: BLE001
+        typer.secho(f"Failed to load plan from {path}: {e}", fg=typer.colors.RED)
+        raise typer.Exit(code=2)
+
+
 @app.command("solve")
 def cmd_solve(
     plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json")
 ):
     path = Path(plan_path) if plan_path else _default_plan_path()
-    plan = load_plan(path)
+    plan = _load_plan_or_exit(path)
     schedule = dp_solve(plan)
     report = validate(plan, schedule)
     printed = False
@@ -53,7 +68,7 @@ def cmd_solve(
 @app.command("show")
 def cmd_show(plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json")):
     path = Path(plan_path) if plan_path else _default_plan_path()
-    plan = load_plan(path)
+    plan = _load_plan_or_exit(path)
     schedule = dp_solve(plan)
     printed = False
     if sys.stdout.isatty() and os.environ.get("CF_FORCE_MARKDOWN") != "1":
@@ -75,7 +90,7 @@ def cmd_export(
     out: str = typer.Option("schedule.md", help="Output file path"),
 ):
     path = Path(plan_path) if plan_path else _default_plan_path()
-    plan = load_plan(path)
+    plan = _load_plan_or_exit(path)
     schedule = dp_solve(plan)
     if format != "md":
         typer.echo("Only markdown export is implemented at this time", err=True)
@@ -91,7 +106,7 @@ def cmd_verify(
 ):
     """Cross-verify DP solution against CP-SAT sequential-lex optimum."""
     path = Path(plan_path) if plan_path else _default_plan_path()
-    plan = load_plan(path)
+    plan = _load_plan_or_exit(path)
     schedule = dp_solve(plan)
     report = verify_lex_optimal(plan, schedule)
     typer.echo("DP Objective:   " + str(schedule.objective))

@@ -1,5 +1,7 @@
-.PHONY: setup lint type test format verify smoke smoke-vercel
-setup: ; pip install -r requirements.txt
+.PHONY: setup setup-dev lint type test format verify smoke smoke-vercel
+# Use python -m pip for portability across environments where `pip` may not be on PATH
+setup: ; python3 -m pip install -r requirements.txt
+setup-dev: ; python3 -m pip install -e .
 lint: ; ruff check cashflow && black --check cashflow
 type: ; mypy cashflow
 test: ; pytest -q
