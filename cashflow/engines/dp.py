@@ -14,15 +14,13 @@ from ..core.model import (
 from ..core.ledger import build_ledger
 
 
-Action = str  # 'O','S','M','L','SS'
+Action = str  # 'O','SP'
 
 
 @dataclass
 class _StateVal:
     # costs that are additive across days
     b2b: int
-    large_days: int
-    single_pen: int
     back: Optional[Tuple]  # (prev_state_key, action)
 
 
@@ -32,10 +30,10 @@ def _allowed_actions(
     if locked is not None:
         return [locked]
     if day == 1:
-        return ["L"]
-    if forbid_large_after_day1:
-        return ["O", "S", "M", "SS"]
-    return ["O", "S", "M", "SS", "L"]
+        return ["SP"]
+    # Only one work option (Spark); forbid_large_after_day1 is retained for API
+    # compatibility but has no effect in the Spark model.
+    return ["O", "SP"]
 
 
 def _has_off_off(vec: List[int]) -> bool:
@@ -53,7 +51,7 @@ def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
     min_net = (plan.target_end_cents - plan.band_cents) - base_end
     max_net = (plan.target_end_cents + plan.band_cents) - base_end
     # Max per remaining day
-    MAX_DAY_NET = 12000
+    MAX_DAY_NET = max(SHIFT_NET_CENTS.values())
 
     pre30 = pre_rent_base_on_day30(plan, dep, bills)
 
@@ -61,9 +59,7 @@ def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
     # State key: (last6_off_tuple, prevWorked:int, workUsed:int, net:int)
     # last6_off_tuple: tuple[int,...] oldest->newest, len<=6
     layers: List[Dict[Tuple, _StateVal]] = []
-    s0: Dict[Tuple, _StateVal] = {
-        ((), 0, 0, 0): _StateVal(b2b=0, large_days=0, single_pen=0, back=None)
-    }
+    s0: Dict[Tuple, _StateVal] = {((), 0, 0, 0): _StateVal(b2b=0, back=None)}
     layers.append(s0)
 
     for day in range(1, 31):
@@ -108,36 +104,25 @@ def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
 
                 # Update costs
                 b2b_new = val.b2b + (1 if (prevW == 1 and will_work == 1) else 0)
-                large_days_new = val.large_days + (1 if a == "L" else 0)
-                single_pen_new = val.single_pen + (
-                    1 if a == "M" else 2 if a == "L" else 0
-                )
 
                 state_key = (last6_new, 1 if will_work else 0, work_used_new, net_new)
                 new_val = _StateVal(
                     b2b=b2b_new,
-                    large_days=large_days_new,
-                    single_pen=single_pen_new,
                     back=((last6_off_tuple, prevW, workUsed, net), a),
                 )
 
-                # Keep lexicographically best by (work_used, b2b, large_days, single_pen)
+                # Keep lexicographically best by (work_used, b2b)
                 existing = cur.get(state_key)
                 if existing is None:
                     cur[state_key] = new_val
                 else:
-                    if (work_used_new, b2b_new, large_days_new, single_pen_new) < (
-                        work_used_new,
-                        existing.b2b,
-                        existing.large_days,
-                        existing.single_pen,
-                    ):
+                    if b2b_new < existing.b2b:
                         cur[state_key] = new_val
 
         layers.append(cur)
 
     # Select best final state within band
-    best_tuple: Optional[Tuple[Tuple[int, int, int, int, int], Tuple, _StateVal]] = None
+    best_tuple: Optional[Tuple[Tuple[int, int, int], Tuple, _StateVal]] = None
     for (last6_off, prevW, workUsed, net), val in layers[-1].items():
         final_closing = base[30] + net
         if not (
@@ -147,7 +132,7 @@ def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
         ):
             continue
         abs_delta = abs(final_closing - plan.target_end_cents)
-        obj = (workUsed, val.b2b, abs_delta, val.large_days, val.single_pen)
+        obj = (workUsed, val.b2b, abs_delta)
         if best_tuple is None or obj < best_tuple[0]:
             best_tuple = (obj, (last6_off, prevW, workUsed, net), val)
 

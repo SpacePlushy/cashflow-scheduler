@@ -61,7 +61,6 @@ def render_calendar_png(
     sub = (168, 176, 190) if theme == "dark" else (90, 96, 108)
     off_fill = (58, 62, 72) if theme == "dark" else (220, 224, 232)
     work_fill = (36, 140, 86) if theme == "dark" else (52, 168, 98)
-    large_fill = (184, 104, 44) if theme == "dark" else (214, 144, 84)
 
     grid_gap = int(24 * scale)
     margin = int(80 * scale)
@@ -104,9 +103,9 @@ def render_calendar_png(
             (cx - wt / 2, header_y - ht / 2), month_title, fill=fg, font=title_font
         )
 
-    w, b2b, delta, large, sp = schedule.objective
+    w, b2b, delta = schedule.objective
     obj_line = (
-        f"work={w}  b2b={b2b}  |Δ|={cents_to_str(delta)}  L={large}  pen={sp}  "
+        f"work={w}  b2b={b2b}  |Δ|={cents_to_str(delta)}  "
         f"final={cents_to_str(schedule.final_closing_cents)}"
     )
     wo, ho = text_size(obj_line, obj_font)
@@ -170,11 +169,7 @@ def render_calendar_png(
 
         row = schedule.ledger[d - 1] if d - 1 < len(schedule.ledger) else None
         if row:
-            fill = (
-                large_fill
-                if row.action == "L"
-                else (work_fill if row.action != "O" else off_fill)
-            )
+            fill = work_fill if row.action != "O" else off_fill
             text_col = fg
         else:
             fill, text_col = off_fill, sub

@@ -13,5 +13,5 @@ def test_regression_objective_and_final():
     assert s1.final_closing_cents == s2.final_closing_cents
 
     # Lock current baseline (update if solver logic changes intentionally)
-    assert s1.objective == (19, 11, 97, 3, 6)
-    assert s1.final_closing_cents == 48953
+    assert s1.objective == (22, 17, 1953)
+    assert s1.final_closing_cents == 51003
