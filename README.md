@@ -7,8 +7,9 @@
 Highlights
 
 - Integer‑cents math for correctness and determinism
-- Hard constraints: non‑negative daily closings, Day‑1 Large, 7‑day Off‑Off window, Day‑30 pre‑rent guard, final balance band
-- Lexicographic objective: `(workdays, b2b, |final−target|, large_days, single_pen)`
+- Hard constraints: non‑negative daily closings, Day‑1 Spark, 7‑day Off‑Off window, Day‑30 pre‑rent guard, final balance band
+- Lexicographic objective: `(workdays, b2b, |final−target|)`
+- Spark shifts: single $100 workday (no size tiers, no deductions)
 - Fast “resume from any day” via manual adjustment (API) or `solve_from()` helper (library)
 - Optional CP‑SAT verification and tie enumeration
 
@@ -26,11 +27,11 @@ How It Works
   - `Plan` holds inputs; `DayLedger`/`Schedule` capture the solved plan.
 - Ledger and validation
   - `build_ledger(plan, actions)` constructs daily rows (opening → deposits → action net → bills → closing).
-  - `validate(plan, schedule)` checks: Day‑1 Large, non‑negativity, final band, Day‑30 pre‑rent guard, and Off‑Off in every 7‑day window.
+  - `validate(plan, schedule)` checks: Day‑1 Spark, non‑negativity, final band, Day‑30 pre‑rent guard, and Off‑Off in every 7‑day window.
 - DP solver (`cashflow/engines/dp.py`)
-  - State: `(last6_off_bits, prevWorked, workUsed, net)` and additive costs `(b2b, large_days, single_pen)`.
-  - Feasibility: rolling Off‑Off, non‑negativity, Day‑30 pre‑rent guard, optional locks, Day‑1 Large.
-  - Selection: choose final states within the band minimizing `(workUsed, b2b, |Δ|, large_days, single_pen)`.
+  - State: `(last6_off_bits, prevWorked, workUsed, net)` and additive cost `(b2b)`.
+  - Feasibility: rolling Off‑Off, non‑negativity, Day‑30 pre‑rent guard, optional locks, Day‑1 Spark.
+  - Selection: choose final states within the band minimizing `(workUsed, b2b, |Δ|)`.
   - Helpers: `solve_from(plan, start_day)` re‑solves tail days by locking a prefix; internal flag `forbid_large_after_day1` exists but is not exposed via CLI.
 - CP‑SAT verifier (`cashflow/engines/cpsat.py`)
   - Builds an equivalent model with one‑hot daily actions and sequential lexicographic minimization.
