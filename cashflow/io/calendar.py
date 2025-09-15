@@ -104,9 +104,9 @@ def render_calendar_png(
             (cx - wt / 2, header_y - ht / 2), month_title, fill=fg, font=title_font
         )
 
-    w, b2b, delta, large, sp = schedule.objective
+    workdays, b2b, delta = schedule.objective
     obj_line = (
-        f"work={w}  b2b={b2b}  |Δ|={cents_to_str(delta)}  L={large}  pen={sp}  "
+        f"work={workdays}  b2b={b2b}  |Δ|={cents_to_str(delta)}  "
         f"final={cents_to_str(schedule.final_closing_cents)}"
     )
     wo, ho = text_size(obj_line, obj_font)

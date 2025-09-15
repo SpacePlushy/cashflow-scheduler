@@ -1,5 +1,6 @@
 from cashflow.io.store import load_plan
 from cashflow.engines.dp import solve
+from cashflow.core.model import SHIFT_NET_CENTS, SPARK_ACTION
 from cashflow.core.validate import validate
 
 
@@ -18,8 +19,9 @@ def test_validation_rules_hold():
     # Global ok
     assert report.ok, report.checks
 
-    # Day 1 must be Large
-    assert schedule.actions[0] == "L"
+    # Spark actions should be limited to Off/Spark and include Spark work
+    assert set(schedule.actions) <= set(SHIFT_NET_CENTS.keys())
+    assert SPARK_ACTION in schedule.actions
 
     # Off-Off windows across [1..7] and [24..30]
     actions = schedule.actions

@@ -7,8 +7,9 @@
 Highlights
 
 - Integer‑cents math for correctness and determinism
-- Hard constraints: non‑negative daily closings, Day‑1 Large, 7‑day Off‑Off window, Day‑30 pre‑rent guard, final balance band
-- Lexicographic objective: `(workdays, b2b, |final−target|, large_days, single_pen)`
+- Hard constraints: non‑negative daily closings, 7‑day Off‑Off window, Day‑30 pre‑rent guard, final balance band
+- Lexicographic objective: `(workdays, b2b, |final−target|)`
+- Spark shifts: a single Spark workday (`SP`) nets $100; off days (`O`) net $0.
 - Fast “resume from any day” via manual adjustment (API) or `solve_from()` helper (library)
 - Optional CP‑SAT verification and tie enumeration
 
@@ -26,14 +27,14 @@ How It Works
   - `Plan` holds inputs; `DayLedger`/`Schedule` capture the solved plan.
 - Ledger and validation
   - `build_ledger(plan, actions)` constructs daily rows (opening → deposits → action net → bills → closing).
-  - `validate(plan, schedule)` checks: Day‑1 Large, non‑negativity, final band, Day‑30 pre‑rent guard, and Off‑Off in every 7‑day window.
+  - `validate(plan, schedule)` checks: Spark action validity, non‑negativity, final band, Day‑30 pre‑rent guard, and Off‑Off in every 7‑day window.
 - DP solver (`cashflow/engines/dp.py`)
-  - State: `(last6_off_bits, prevWorked, workUsed, net)` and additive costs `(b2b, large_days, single_pen)`.
-  - Feasibility: rolling Off‑Off, non‑negativity, Day‑30 pre‑rent guard, optional locks, Day‑1 Large.
-  - Selection: choose final states within the band minimizing `(workUsed, b2b, |Δ|, large_days, single_pen)`.
-  - Helpers: `solve_from(plan, start_day)` re‑solves tail days by locking a prefix; internal flag `forbid_large_after_day1` exists but is not exposed via CLI.
+  - State: `(last6_off_bits, prevWorked, workUsed, net)` and additive cost `(b2b)`.
+  - Feasibility: rolling Off‑Off, non‑negativity, Day‑30 pre‑rent guard, optional locks.
+  - Selection: choose final states within the band minimizing `(workUsed, b2b, |Δ|)`.
+  - Helpers: `solve_from(plan, start_day)` re‑solves tail days by locking a prefix.
 - CP‑SAT verifier (`cashflow/engines/cpsat.py`)
-  - Builds an equivalent model with one‑hot daily actions and sequential lexicographic minimization.
+  - Builds an equivalent model with one‑hot daily actions and sequential lexicographic minimization across three objective parts.
   - `verify_lex_optimal(plan, dp_schedule)` compares DP vs CP‑SAT objectives; CLI shows per‑stage solver statuses.
   - `enumerate_ties(plan, limit)` lists alternate optimal schedules (library API).
 

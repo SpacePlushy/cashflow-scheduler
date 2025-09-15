@@ -29,9 +29,10 @@ def validate(plan: Plan, schedule: Schedule) -> ValidationReport:
     dep, bills, base = build_prefix_arrays(plan)
     checks: List[Tuple[str, bool, str]] = []
 
-    # Day 1 must be L
-    day1_ok = schedule.actions[0] == "L"
-    checks.append(("Day 1 Large", day1_ok, schedule.actions[0]))
+    # Ensure every action is a known Spark code (O or SP)
+    valid_actions = all(a in SHIFT_NET_CENTS for a in schedule.actions)
+    detail = "{" + ",".join(sorted(set(schedule.actions))) + "}"
+    checks.append(("Actions valid", valid_actions, detail))
 
     # Non-negativity & bills paid by construction
     nonneg_ok = True
