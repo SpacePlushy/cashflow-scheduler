@@ -18,8 +18,8 @@ def test_validation_rules_hold():
     # Global ok
     assert report.ok, report.checks
 
-    # Day 1 must be Large
-    assert schedule.actions[0] == "L"
+    # Day 1 must be Spark
+    assert schedule.actions[0] == "Spark"
 
     # Off-Off windows across [1..7] and [24..30]
     actions = schedule.actions
