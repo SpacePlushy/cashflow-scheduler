@@ -8,8 +8,8 @@ from ..core.model import Schedule, cents_to_str
 def render_markdown(schedule: Schedule) -> str:
     lines: List[str] = []
     # Display shift payout as its own column and list it after the action
-    # to reflect that Flex deposits occur after working (SS deposits after
-    # the second shift). External deposits remain in the Deposits column.
+    # to reflect that Spark payouts are captured when the workday completes.
+    # External deposits remain in the Deposits column.
     lines.append("| Day | Opening | Action | Payout | Deposits | Bills | Closing |")
     lines.append("| ---:| -------:|:------:| ------:| --------:| -----:| -------:|")
     for row in schedule.ledger:
@@ -17,9 +17,9 @@ def render_markdown(schedule: Schedule) -> str:
             f"| {row.day:>3} | {cents_to_str(row.opening_cents):>7} | {row.action:^6} | {cents_to_str(row.net_cents):>6} | {cents_to_str(row.deposit_cents):>8} | {cents_to_str(row.bills_cents):>5} | {cents_to_str(row.closing_cents):>7} |"
         )
     lines.append("")
-    w, b2b, delta, large, sp = schedule.objective
+    w, b2b, delta = schedule.objective
     lines.append(
-        f"Objective: workdays={w}, b2b={b2b}, |Δ|={cents_to_str(delta)}, large_days={large}, single_pen={sp}"
+        f"Objective: workdays={w}, b2b={b2b}, |Δ|={cents_to_str(delta)}"
     )
     lines.append(f"Final closing: {cents_to_str(schedule.final_closing_cents)}")
     return "\n".join(lines)
