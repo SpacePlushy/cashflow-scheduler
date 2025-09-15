@@ -232,6 +232,9 @@ def cmd_calendar(
     width: int = typer.Option(3840, help="Image width (px)"),
     height: int = typer.Option(2160, help="Image height (px)"),
     theme: str = typer.Option("dark", help="Theme: dark|light"),
+    force_4k: bool = typer.Option(
+        False, "--4k", help="Force 3840x2160 regardless of width/height"
+    ),
 ):
     """Generate a high-resolution calendar PNG for wallpaper use."""
     path = Path(plan_path) if plan_path else _default_plan_path()
@@ -246,6 +249,8 @@ def cmd_calendar(
         if out
         else Path.home() / "Downloads" / "cashflow_calendar.png"
     )
+    if force_4k:
+        width, height = 3840, 2160
     try:
         render_calendar_png(
             schedule, out_path, size=(width, height), theme=theme, bills_by_day=bmap
@@ -253,7 +258,7 @@ def cmd_calendar(
     except RuntimeError as e:
         typer.echo(str(e), err=True)
         raise typer.Exit(code=2)
-    typer.echo(f"Wrote {out_path}")
+    typer.echo(f"Wrote {out_path} ({width}x{height})")
 
 
 def main():
