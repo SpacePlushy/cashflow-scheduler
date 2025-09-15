@@ -54,7 +54,7 @@ Note: `instructions.md` includes forward‑looking CLI ideas (e.g., `go`, `set-e
 
 ## Agent Notes (Contributing)
 - Money is integer cents; never introduce floats in computations or IO.
-- Shift nets are defined in `core/model.py::SHIFT_NET_CENTS`. Do not change without updating tests and docs.
+- Shift nets are defined in `core/model.py::SHIFT_NET_CENTS` (`O=0`, `SP=10000`). Do not change without updating tests and docs.
 - Validator is independent of the solver; keep feasibility rules mirrored across DP, validator, and CP‑SAT.
 - OR‑Tools is optional; keep imports guarded in `engines/cpsat.py` and surface clear errors only when CP‑SAT paths are used.
 - If you modify solver behavior or plan schema, update:
@@ -63,7 +63,7 @@ Note: `instructions.md` includes forward‑looking CLI ideas (e.g., `go`, `set-e
 - Commit messages follow Conventional Commits; include sample CLI output for user‑visible changes.
 
 ## Recent History (high‑level)
-- Added `solve_from()` to DP and optional `forbid_large_after_day1` guard.
+- Transitioned to Spark single-shift workdays paying $100 net; `solve_from()` remains available for DP tail solves.
 - CP‑SAT: sequential lex optimization with per‑stage statuses and tie enumeration.
 - Serverless API consolidated under `api/index.py` with CORS; `/set_eod` and `/export` added.
 - Packaging/CI: editable installs fixed, mypy tightened, smoke scripts for Vercel/Fly.
