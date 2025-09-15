@@ -46,11 +46,10 @@ Plan daily work shifts and pay bills across a fixed 30‑day horizon with exact 
 
 ## 2.1 Functional Requirements
 
-- FR‑01: Solve full month (days 1–30) with **intra‑day order**: opening → deposits → shifts (gross − \$8 if any shift) → bills → closing.
+- FR‑01: Solve full month (days 1–30) with **intra‑day order**: opening → deposits → shifts (Spark adds $100 when worked) → bills → closing.
 - FR‑02: Enforce **hard constraints** (see §7 Validation Rules).
 - FR‑03: Lexicographic objective:
-  `( #work_days, back_to_back_count, |final − 490.50|, large_day_count, single_shift_preference )`
-  where single‑shift preference penalizes M=1, L=2 (S=0, SS=0).
+  `( #work_days, back_to_back_count, |final − target_end| )`
 - FR‑04: Resume from day _d+1_: after inserting a manual adjustment on day _d_, seed DP with prefix state and re‑solve tail.
 - FR‑05: Output Sections 1–3 exactly in markdown; optional JSON/CSV.
 - FR‑06: CLI commands (see §6).
@@ -98,7 +97,7 @@ cashflow/
 
 1. Load `plan.json` → event stream.
 2. Build ledger day‑by‑day (deposits/bills/adjustments).
-3. Run DP solver → `actions[1..30]` (each ∈ {O,S,M,L,SS}).
+3. Run DP solver → `actions[1..30]` (each ∈ {O, Spark}).
 4. Produce Section 1–3 views; run validator; export.
 
 ## 3.3 Data Flow (Resume from Day _d+1_)
@@ -115,9 +114,9 @@ cashflow/
 - `cnt` (0..6): how many bits are valid so far.
 - `prevWorked` (0/1).
 - `workUsed` (0..30).
-- `netSoFar` (cents) **relative to Amazon work only**.
+- `netSoFar` (cents) **relative to Spark workdays only**.
 
-State value stores **cost tuple**: `(b2b, large_count, single_pen)` plus backpointers.
+State value stores **cost tuple**: `(b2b)` plus backpointers.
 
 ---
 
@@ -127,7 +126,7 @@ State value stores **cost tuple**: `(b2b, large_count, single_pen)` plus backpoi
 
 - `deposit`: {day, amount}
 - `bill`: {day, name, amount}
-- `shift`: {day, code in \[O,S,M,L,SS]}
+- `shift`: {day, code in \[O,Spark]}
 - `adjustment`: {day, amount, note} ← created by EOD override
 - `meta`: target_end, band, rent_guard
 
@@ -197,7 +196,7 @@ State value stores **cost tuple**: `(b2b, large_count, single_pen)` plus backpoi
       "maxItems": 30,
       "items": {
         "type": ["string", "null"],
-        "enum": ["O", "S", "M", "L", "SS", null]
+        "enum": ["O", "Spark", null]
       }
     },
     "manual_adjustments": {
@@ -233,41 +232,38 @@ State value stores **cost tuple**: `(b2b, large_count, single_pen)` plus backpoi
 
 ## 5.1 DP (Primary)
 
-- **Actions per day:** `A = {'O','S','M','L','SS'}` (Day 1: `{'L'}`).
-- **Net per action (cents):** `O=0, S=5600, M=6750, L=8650, SS=12000`.
+- **Actions per day:** `A = {'O','Spark'}` (Day 1: `{'Spark'}`).
+- **Net per action (cents):** `O=0, Spark=10_000`.
 - **Transition feasibility (per day `t`):**
 
   1. **7‑day Off‑Off Rule:** In any rolling 7‑day window ending at `t`, there must exist at least one `Off,Off` pair. Enforced by checking the current 7‑vector derived from `(bits,cnt)` plus today’s Off flag.
   2. **Non‑negativity:** `closing_t >= 0` after applying deposits, shift net, and bills for day `t`.
   3. **Rent guard (Day 30):** `pre_rent_balance >= rent_guard` after deposits & shifts (before paying rent).
-  4. **Shift pairing:** Two‑shift days allowed **only as SS**; Large cannot be in a two‑shift day; max two shifts per day.
-  5. **Day 1 Large:** Day 1 action must be `L`.
+  4. **Day 1 Spark:** Day 1 action must be `Spark`.
 
 - **Objective cost per step:**
 
   - `workdays += (action != 'O')`
   - `b2b += (prevWorked and action != 'O')`
-  - `large_days += (action == 'L')`
-  - `single_pen += 1 if action=='M' else 2 if action=='L' else 0` (SS, S, O give 0)
 
 - **Global selection:** After Day 30, select states with **final balance within target band** and minimum **lexicographic tuple**:
 
   ```
-  (workdays, b2b, abs(final - target_end), large_days, single_pen)
+  (workdays, b2b, abs(final - target_end))
   ```
 
 - **Lower/upper pruning:**
   Let `K` be the target workdays being searched (start from bound, increment only if needed).
   At day `t`, with `net_so_far` and `work_used`:
 
-  - Max additional net = `(K - work_used) * 12000`.
+  - Max additional net = `(K - work_used) * 10_000`.
   - If `net_so_far + max_additional_net < MIN_NET`, prune.
   - If `net_so_far > MAX_NET`, prune.
 
 ### Pseudocode (resume‑capable)
 
 ```
-DP[0] = { (bits=0,cnt=0,prevW=0,work=0,net=0) : cost=(0,0,0) }
+DP[0] = { (bits=0,cnt=0,prevW=0,work=0,net=0) : cost=(0,) }
 
 for day in 1..30:
   for each state in DP[day-1]:
@@ -276,7 +272,7 @@ for day in 1..30:
        if !rolling_off_off_ok(bits,cnt,a,day): continue
        net_new = net + NET[a]
        if net_new > MAX_NET: continue
-       if net_new + 12000*(K - (work+worked(a))) < MIN_NET: continue
+       if net_new + 10_000*(K - (work+worked(a))) < MIN_NET: continue
        closing = opening(day) + deposits(day) + net_new - bills(day)
        if closing < 0: continue
        if day==30 and (opening30 + deposits30 + NET[a]) < RENT_GUARD: continue
@@ -350,14 +346,13 @@ def validate(plan, schedule) -> ValidationReport: ...
 - **Balance non‑negative at all times** (after each day’s close).
 - **All bills paid on their due dates**.
 - **Final Day‑30 closing balance** ∈ `[490.50 ± 25.00]`.
-- **Day 1** must begin with **Large**.
-- **Max 2 shifts/day;** two‑shift days are **Small + Small** only.
-- **Large** scheduled alone (never paired); at most one Large per day.
-- **Work‑day cost**: if any shift worked that day, subtract exactly **\$8.00** once.
+- **Day 1** must begin with **Spark**.
+- **Shifts per day:** choose at most one Spark workday (or Off).
+- **Spark payout:** each Spark day adds **\$100.00**; no per-day deductions.
 - **Off day** = zero shifts, zero work cost.
 - **Every rolling 7‑day window** (windows \[1–7] … \[24–30]) contains at least **one “Off, Off” pair** (two consecutive Off days).
 - **Day‑30 rent guard:** after deposits and shifts on Day 30 (before rent), balance ≥ **\$1,636**.
-- **Intra‑day evaluation order**: Opening → Deposits → Shifts (gross−\$8 if worked) → Bills → Closing.
+- **Intra‑day evaluation order**: Opening → Deposits → Shifts (+$100 if Spark) → Bills → Closing.
 
 ---
 
@@ -380,7 +375,7 @@ def validate(plan, schedule) -> ValidationReport: ...
 
 - Canonical dataset (the one you supplied) → assert:
 
-  - Objectives tuple equals `(19, 11, $0.97, 3, 0)` for the strict lexicographic optimum.
+  - Objectives tuple equals `(22, 17, $19.53)` for the strict lexicographic optimum.
   - Section 1–3 markdown matches golden (allowing whitespace tolerance).
 
 ## 8.4 Cross‑Verification
