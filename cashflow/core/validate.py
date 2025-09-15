@@ -29,9 +29,9 @@ def validate(plan: Plan, schedule: Schedule) -> ValidationReport:
     dep, bills, base = build_prefix_arrays(plan)
     checks: List[Tuple[str, bool, str]] = []
 
-    # Day 1 must be L
-    day1_ok = schedule.actions[0] == "L"
-    checks.append(("Day 1 Large", day1_ok, schedule.actions[0]))
+    # Day 1 must be a Spark workday
+    day1_ok = schedule.actions[0] == "Spark"
+    checks.append(("Day 1 Spark", day1_ok, schedule.actions[0]))
 
     # Non-negativity & bills paid by construction
     nonneg_ok = True

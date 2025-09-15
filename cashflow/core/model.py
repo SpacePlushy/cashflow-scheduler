@@ -17,13 +17,10 @@ def cents_to_str(cents: int) -> str:
     return f"{sign}{cents_abs // 100}.{cents_abs % 100:02d}"
 
 
-# Shift net values (already subtracting $8 work cost when worked)
+# Shift net values (Spark workdays pay $100; no per-day deductions applied)
 SHIFT_NET_CENTS: Dict[str, int] = {
     "O": 0,
-    "S": 5600,
-    "M": 6750,
-    "L": 8650,
-    "SS": 12000,
+    "Spark": 10_000,
 }
 
 
@@ -74,8 +71,8 @@ class DayLedger:
 
 @dataclass
 class Schedule:
-    actions: List[str]  # 30 entries from {O,S,M,L,SS}
-    objective: Tuple[int, int, int, int, int]
+    actions: List[str]  # 30 entries from {O, Spark}
+    objective: Tuple[int, int, int]
     final_closing_cents: int
     ledger: List[DayLedger]
 
