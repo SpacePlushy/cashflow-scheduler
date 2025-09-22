@@ -89,7 +89,6 @@ class CPSATSolveOptions:
 
     max_time_seconds: Optional[float] = 10.0
     num_search_workers: Optional[int] = 8
-    warm_start_actions: Optional[List[str]] = None
     search_branching: Optional[int] = None
     log_search_progress: bool = False
 
@@ -123,11 +122,7 @@ class VerificationReport:
     statuses: Optional[List[str]] = None
 
 
-def _build_model(
-    plan: Plan,
-    *,
-    warm_start_actions: Optional[List[str]] = None,
-):
+def _build_model(plan: Plan):
     """Construct the CP-SAT model for a given `plan`.
 
     Returns: (model, x, obj_parts, final_close)
@@ -142,7 +137,6 @@ def _build_model(
       balance on day t.
     - pre_rent_base_on_day30(plan, dep, bills): base amount for the pre-rent
       guard constraint on Day-30.
-    - warm_start_actions: optional 30-length list used to seed solver hints.
     """
     assert cp_model is not None, "OR-Tools CP-SAT not available"
 
@@ -273,28 +267,6 @@ def _build_model(
     # - single_pen: final tie-breaker to prefer Medium over Large, and avoid
     #   unnecessary Mediums as well.
 
-    if warm_start_actions is not None:
-        if len(warm_start_actions) != 30:
-            raise ValueError("warm_start_actions must have length 30")
-        running_prefix = 0
-        for t, action in enumerate(warm_start_actions):
-            if action not in IDX:
-                continue
-            idx = IDX[action]
-            model.AddHint(x[t][idx], 1)
-            is_off = action == "O"
-            model.AddHint(off[t], 1 if is_off else 0)
-            model.AddHint(w[t], 0 if is_off else 1)
-            running_prefix += SHIFT_NET_CENTS.get(action, 0)
-            model.AddHint(prefix_net[t], running_prefix)
-            if t < 29:
-                next_action = warm_start_actions[t + 1]
-                if next_action in IDX:
-                    next_is_off = next_action == "O"
-                    model.AddHint(b2b[t], 0 if (is_off or next_is_off) else 1)
-                    model.AddHint(oo[t], 1 if (is_off and next_is_off) else 0)
-        model.AddHint(final_close, base[30] + running_prefix)
-
     if cp_model is not None:
         for t in range(30):
             model.AddDecisionStrategy(
@@ -323,18 +295,14 @@ def enumerate_ties(plan: Plan, limit: int = 5) -> List[CPSATSolution]:
 
     # First, get the optimal objective via sequential lex optimization
     opts = CPSATSolveOptions()
-    model_opt, x_opt, obj_parts, final_close_opt = _build_model(
-        plan, warm_start_actions=opts.warm_start_actions
-    )
+    model_opt, x_opt, obj_parts, final_close_opt = _build_model(plan)
     solver_opt = cp_model.CpSolver()
     w, b2b, absd, large, sp, _, _ = _solve_sequential_lex(
         model_opt, obj_parts, solver_opt, opts
     )
 
     # Build a fresh model with the same constraints and fix the objective parts to the optimal values
-    model, x, obj_parts2, final_close = _build_model(
-        plan, warm_start_actions=opts.warm_start_actions
-    )
+    model, x, obj_parts2, final_close = _build_model(plan)
     workdays, b2b_sum, abs_diff, large_days, single_pen = obj_parts2
     model.Add(workdays == w)
     model.Add(b2b_sum == b2b)
@@ -511,9 +479,7 @@ def solve_lex(plan: Plan, options: Optional[CPSATSolveOptions] = None) -> CPSATS
         raise RuntimeError("OR-Tools CP-SAT not installed")
 
     opts = options or CPSATSolveOptions()
-    model, x, obj_parts, final_close = _build_model(
-        plan, warm_start_actions=opts.warm_start_actions
-    )
+    model, x, obj_parts, final_close = _build_model(plan)
     solver = cp_model.CpSolver()
     w, b2b, absd, large, sp, statuses, wall = _solve_sequential_lex(
         model, obj_parts, solver, opts
@@ -550,13 +516,7 @@ def verify_lex_optimal(plan: Plan, schedule_dp) -> VerificationReport:
     per-stage statuses. If OR-Tools is not available, the report explains why.
     """
     try:
-        warm_start = (
-            list(schedule_dp.actions)
-            if len(schedule_dp.actions) == 30
-            else None
-        )
-        opts = CPSATSolveOptions(warm_start_actions=warm_start)
-        sol = solve_lex(plan, options=opts)
+        sol = solve_lex(plan)
     except Exception as e:  # pragma: no cover - dependent on OR-Tools
         return VerificationReport(
             ok=False,
