@@ -72,6 +72,34 @@ export function ResultsView({ plan, result, status, error }: ResultsViewProps) {
 
   return (
     <div className="space-y-6">
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+          Solver
+        </h3>
+        <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
+          Backend: <strong>{result.solver.name.toUpperCase()}</strong>
+          {" "}
+          ({result.solver.seconds.toFixed(2)}s)
+        </p>
+        {result.solver.fallback_reason && (
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+            Fallback reason: {result.solver.fallback_reason}
+          </p>
+        )}
+        {result.solver.statuses.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Stage statuses
+            </p>
+            <ul className="mt-1 grid gap-1 text-xs text-slate-600 dark:text-slate-300">
+              {result.solver.statuses.map((stage, idx) => (
+                <li key={`${stage}-${idx}`}>Stage {idx + 1}: {stage}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">

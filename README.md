@@ -1,23 +1,25 @@
-# Cashflow Scheduler (DP)
+# Cashflow Scheduler (CP-SAT)
 
 [![CI](https://github.com/SpacePlushy/cashflow-scheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/SpacePlushy/cashflow-scheduler/actions)
 
-30‑day cash‑flow scheduler with an exact Dynamic Programming (DP) solver over integer cents. Produces constraint‑correct monthly schedules and cross‑verifies optimality with CP‑SAT (OR‑Tools).
+30‑day cash‑flow scheduler backed by Google OR-Tools CP-SAT for lexicographic optimality, with the original Dynamic Programming (DP) engine retained as a fast fallback.
 
 Highlights
 
 - Integer‑cents math for correctness and determinism
+- Primary solver: OR-Tools CP-SAT sequential lexicographic optimization with surfaced solver diagnostics
+- DP engine still available for lightning-fast fallback or local experimentation (`--solver dp`)
 - Hard constraints: non‑negative daily closings, Day‑1 Large, 7‑day Off‑Off window, Day‑30 pre‑rent guard, final balance band
 - Lexicographic objective: `(workdays, b2b, |final−target|, large_days, single_pen)`
-- Fast “resume from any day” via manual adjustment (API) or `solve_from()` helper (library)
-- Optional CP‑SAT verification and tie enumeration
+- Optional tie enumeration and DP ↔ CP-SAT comparison tools
 
 Quick Start
 
-- Ensure Python 3.11+
+- Ensure Python 3.11+ and install `ortools>=9.8` (`python -m pip install --user ortools>=9.8`)
 - Place a `plan.json` in the project root (see example)
-- Solve: `python -m cashflow.cli solve`
-- Verify (needs OR‑Tools): `python -m cashflow.cli verify`
+- Solve: `python -m cashflow.cli solve` (CP-SAT by default; add `--solver dp` to force DP)
+- Launch the web UI + API: `./scripts/dev_run_all.sh`
+- Verify DP vs CP-SAT: `python -m cashflow.cli verify`
 
 How It Works
 
@@ -27,25 +29,23 @@ How It Works
 - Ledger and validation
   - `build_ledger(plan, actions)` constructs daily rows (opening → deposits → action net → bills → closing).
   - `validate(plan, schedule)` checks: Day‑1 Large, non‑negativity, final band, Day‑30 pre‑rent guard, and Off‑Off in every 7‑day window.
-- DP solver (`cashflow/engines/dp.py`)
-  - State: `(last6_off_bits, prevWorked, workUsed, net)` and additive costs `(b2b, large_days, single_pen)`.
-  - Feasibility: rolling Off‑Off, non‑negativity, Day‑30 pre‑rent guard, optional locks, Day‑1 Large.
-  - Selection: choose final states within the band minimizing `(workUsed, b2b, |Δ|, large_days, single_pen)`.
-  - Helpers: `solve_from(plan, start_day)` re‑solves tail days by locking a prefix; internal flag `forbid_large_after_day1` exists but is not exposed via CLI.
-- CP‑SAT verifier (`cashflow/engines/cpsat.py`)
-  - Builds an equivalent model with one‑hot daily actions and sequential lexicographic minimization.
-  - `verify_lex_optimal(plan, dp_schedule)` compares DP vs CP‑SAT objectives; CLI shows per‑stage solver statuses.
-  - `enumerate_ties(plan, limit)` lists alternate optimal schedules (library API).
+- CP‑SAT solver (`cashflow/engines/cpsat.py`)
+  - Builds a one-hot action model and solves a five-part lexicographic objective `(workdays, b2b, |Δ|, large_days, single_pen)` sequentially.
+  - Exposes `solve_with_diagnostics(plan)` returning the schedule plus statuses, wall time, and fallback metadata.
+  - Supports tie enumeration and DP schedule verification utilities.
+- DP engine (`cashflow/engines/dp.py`)
+  - Still available for fast experimentation or when OR-Tools is unavailable (`--solver dp`).
+  - Provides helpers like `solve_from(plan, start_day)` for prefix locking scenarios.
 
 CLI
 
 - Show: `python -m cashflow.cli show`
-- Solve + validate: `python -m cashflow.cli solve`
+- Solve + validate: `python -m cashflow.cli solve` (CP-SAT by default; add `--solver dp` to force DP)
 - Set EOD and re-solve: `python -m cashflow.cli set-eod <day> <amount>`
   - Add `--calendar` to overwrite the wallpaper PNG (~/Downloads/cashflow_calendar.png).
 - Calendar wallpaper (PNG): `python -m cashflow.cli calendar --width 3840 --height 2160 --theme dark`
 - Export: `python -m cashflow.cli export --format md --out schedule.md`
-- Verify with CP‑SAT: `python -m cashflow.cli verify`
+- Verify DP vs CP‑SAT: `python -m cashflow.cli verify`
 - All commands default to `./plan.json`; pass a custom path as an argument.
 
 EOD Override Example
@@ -60,7 +60,7 @@ EOD Override Example
 Troubleshooting
 
 - `python` vs `python3`: these may be different interpreters with different site‑packages. If `python -m pytest` fails but `python3 -m pytest` works, install missing deps for your `python` (e.g., `python -m pip install --user --break-system-packages pytest ortools`) or use the repo venv (`.venv/bin/python -m pytest`).
-- OR‑Tools for verify: the `verify` command requires OR‑Tools. If unavailable, `verify` exits non‑zero. Install it for your interpreter: `python -m pip install --user --break-system-packages 'ortools>=9.8'`.
+- OR‑Tools required: CP-SAT is the default backend. Install it for your interpreter with `python -m pip install --user 'ortools>=9.8'`. CLI/API will fall back to DP (and warn) if it is missing.
 
 Calendar Export
 
@@ -72,11 +72,11 @@ Calendar Export
 
 API (local dev)
 
-- Install: `pip install -r api/requirements.txt` (use a venv)
+- Install: `pip install -r api/requirements.txt ortools>=9.8` (use a venv)
 - Run: `uvicorn api.index:app --reload`
 - Endpoints
   - `GET /health`
-  - `POST /solve` — returns actions, objective, ledger, validation checks
+  - `POST /solve` — returns actions, objective, ledger, validation checks, and solver diagnostics
   - `POST /set_eod` — resume‑from‑day via end‑of‑day override `{ "day": 12, "eod_amount": 250.00 }`
   - `POST /export` — `{ "format": "md"|"csv"|"json" }` → rendered schedule
 
@@ -94,6 +94,7 @@ Build, Test, Type, Lint
 - Lint/format: `make lint` / `make format`
 - Types: `make type`
 - CP‑SAT verify: `make verify`
+- E2E (web + API): `cd web && npx playwright test` (run `npx playwright install` once to download browsers)
 
 Plan File
 
@@ -102,9 +103,9 @@ Plan File
 
 Changelog Highlights
 
-- DP: added `solve_from()` and internal `forbid_large_after_day1` flag; refined Off‑Off/window handling and pruning.
-- CP‑SAT: sequential lexicographic verify with per‑stage statuses; `enumerate_ties()` for alternate optimal schedules.
-- API: `/solve`, `/set_eod`, `/export` with CORS; split serverless `api/` deps from root to slim deploys.
+- CP‑SAT: promoted to primary solver with diagnostics and DP fallback integration; tie enumeration and verification remain available.
+- DP: retained as secondary engine (`--solver dp`) for fast experimentation and fallback when CP-SAT is unavailable.
+- API/UI: `/solve` now emits solver metadata consumed by the Next.js frontend; CLI exposes backend selection flags.
 - Packaging/CI: editable installs fixed; mypy typing tightened; Makefile smoke targets and Vercel/Fly helpers added.
 
 See `instructions.md` for a deeper developer guide and algorithmic notes.

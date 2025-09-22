@@ -31,6 +31,17 @@ fi
 if ! python3 -m pip show uvicorn >/dev/null 2>&1; then
   python3 -m pip install --user uvicorn
 fi
+if ! python3 - <<'PY'
+import importlib
+import sys
+try:
+    importlib.import_module("ortools")
+except ModuleNotFoundError:
+    sys.exit(1)
+PY
+then
+  python3 -m pip install --user "ortools>=9.8"
+fi
 
 printf '[2/5] Starting FastAPI backend on %s...\n' "$API_URL"
 pushd "$ROOT_DIR" >/dev/null

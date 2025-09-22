@@ -25,8 +25,8 @@ Key ideas:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from dataclasses import dataclass, field
+from typing import Dict, List, Tuple, Optional, Literal
 
 try:
     # Optional dependency: the rest of the repo (DP engine, CLI, tests) can run
@@ -39,9 +39,11 @@ except Exception:  # pragma: no cover - optional dependency
 from ..core.model import (
     SHIFT_NET_CENTS,
     Plan,
+    Schedule,
     build_prefix_arrays,
     pre_rent_base_on_day30,
 )
+from ..core.ledger import build_ledger
 
 # Notes on core.model imports:
 # - Plan: input data class describing the month, target band, rent guard, and
@@ -77,7 +79,27 @@ class CPSATSolution:
     actions: List[str]
     objective: Tuple[int, int, int, int, int]
     final_closing_cents: int
+    statuses: List[str] = field(default_factory=list)
+    solve_seconds: float = 0.0
+
+
+@dataclass
+class CPSATSolveOptions:
+    """Runtime tuning knobs for CP-SAT sequential lex optimization."""
+
+    max_time_seconds: Optional[float] = 10.0
+    num_search_workers: Optional[int] = 8
+
+
+@dataclass
+class CPSATSolveResult:
+    """Structured result returned by `solve_with_diagnostics`."""
+
+    schedule: Schedule
+    solver: Literal["cpsat", "dp"]
     statuses: List[str]
+    solve_seconds: float
+    fallback_reason: Optional[str] = None
 
 
 @dataclass
@@ -258,7 +280,10 @@ def enumerate_ties(plan: Plan, limit: int = 5) -> List[CPSATSolution]:
     # First, get the optimal objective via sequential lex optimization
     model_opt, x_opt, obj_parts, final_close_opt = _build_model(plan)
     solver_opt = cp_model.CpSolver()
-    w, b2b, absd, large, sp = _solve_sequential_lex(model_opt, obj_parts, solver_opt)
+    opts = CPSATSolveOptions()
+    w, b2b, absd, large, sp, _, _ = _solve_sequential_lex(
+        model_opt, obj_parts, solver_opt, opts
+    )
 
     # Build a fresh model with the same constraints and fix the objective parts to the optimal values
     model, x, obj_parts2, final_close = _build_model(plan)
@@ -334,7 +359,12 @@ def _status_name(code: object) -> str:
     return str(code)
 
 
-def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
+def _solve_sequential_lex(
+    model,
+    obj_parts,
+    solver: "cp_model.CpSolver",
+    options: CPSATSolveOptions,
+):
     """Solve a 5-part lexicographic objective sequentially.
 
     At each stage, minimize the current part, record the optimum, then add an
@@ -345,16 +375,23 @@ def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     workdays, b2b_sum, abs_diff, large_days, single_pen = obj_parts
 
     statuses: List[str] = []
+    total_wall = 0.0
+
+    if options.max_time_seconds is not None:
+        solver.parameters.max_time_in_seconds = options.max_time_seconds
+    else:
+        solver.parameters.max_time_in_seconds = 0.0
+    if options.num_search_workers is not None:
+        solver.parameters.num_search_workers = options.num_search_workers
 
     # 1) Minimize workdays
     model.Minimize(workdays)
-    solver.parameters.max_time_in_seconds = 10.0
-    solver.parameters.num_search_workers = 8
     r = solver.Solve(model)
     statuses.append(_status_name(r))
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed to find a solution for objective 1")
     best_work = solver.Value(workdays)
+    total_wall += solver.WallTime()
     model.Add(workdays == best_work)
 
     # 2) Minimize b2b
@@ -364,6 +401,7 @@ def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 2")
     best_b2b = solver.Value(b2b_sum)
+    total_wall += solver.WallTime()
     model.Add(b2b_sum == best_b2b)
 
     # 3) Minimize abs_diff
@@ -373,6 +411,7 @@ def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 3")
     best_abs = solver.Value(abs_diff)
+    total_wall += solver.WallTime()
     model.Add(abs_diff == best_abs)
 
     # 4) Minimize large_days
@@ -382,6 +421,7 @@ def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 4")
     best_large = solver.Value(large_days)
+    total_wall += solver.WallTime()
     model.Add(large_days == best_large)
 
     # 5) Minimize single_pen (final tie-breaker among Large/Medium usage)
@@ -390,18 +430,30 @@ def _solve_sequential_lex(model, obj_parts, solver: "cp_model.CpSolver"):
     statuses.append(_status_name(r))
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 5")
+    total_wall += solver.WallTime()
 
-    return best_work, best_b2b, best_abs, best_large, solver.Value(single_pen), statuses
+    return (
+        best_work,
+        best_b2b,
+        best_abs,
+        best_large,
+        solver.Value(single_pen),
+        statuses,
+        total_wall,
+    )
 
 
-def solve_lex(plan: Plan) -> CPSATSolution:
+def solve_lex(plan: Plan, options: Optional[CPSATSolveOptions] = None) -> CPSATSolution:
     """Run CP-SAT sequential lex optimization and extract the schedule."""
     if cp_model is None:
         raise RuntimeError("OR-Tools CP-SAT not installed")
 
+    opts = options or CPSATSolveOptions()
     model, x, obj_parts, final_close = _build_model(plan)
     solver = cp_model.CpSolver()
-    w, b2b, absd, large, sp, statuses = _solve_sequential_lex(model, obj_parts, solver)
+    w, b2b, absd, large, sp, statuses, wall = _solve_sequential_lex(
+        model, obj_parts, solver, opts
+    )
 
     # Extract actions from the solved one-hot variables.
     actions: List[str] = []
@@ -422,6 +474,7 @@ def solve_lex(plan: Plan) -> CPSATSolution:
         objective=(w, b2b, absd, large, sp),
         final_closing_cents=final_cents,
         statuses=statuses,
+        solve_seconds=wall,
     )
     return sol
 
@@ -456,3 +509,75 @@ def verify_lex_optimal(plan: Plan, schedule_dp) -> VerificationReport:
         detail=detail,
         statuses=sol.statuses,
     )
+
+
+def _solve_with_dp(plan: Plan) -> Schedule:
+    from . import dp  # Local import to avoid circular dependency
+
+    return dp.solve(plan)
+
+
+def solve_with_diagnostics(
+    plan: Plan,
+    *,
+    options: Optional[CPSATSolveOptions] = None,
+    dp_fallback: bool = True,
+) -> CPSATSolveResult:
+    """Solve a plan using CP-SAT, returning diagnostics and supporting DP fallback."""
+
+    opts = options or CPSATSolveOptions()
+
+    if cp_model is None:
+        if not dp_fallback:
+            raise RuntimeError("OR-Tools CP-SAT not installed")
+        schedule = _solve_with_dp(plan)
+        return CPSATSolveResult(
+            schedule=schedule,
+            solver="dp",
+            statuses=[],
+            solve_seconds=0.0,
+            fallback_reason="OR-Tools CP-SAT not installed",
+        )
+
+    try:
+        sol = solve_lex(plan, options=opts)
+    except Exception as exc:
+        if not dp_fallback:
+            raise
+        schedule = _solve_with_dp(plan)
+        return CPSATSolveResult(
+            schedule=schedule,
+            solver="dp",
+            statuses=[],
+            solve_seconds=0.0,
+            fallback_reason=str(exc),
+        )
+
+    ledger = build_ledger(plan, sol.actions)
+    final_cents = sol.final_closing_cents
+    if ledger:
+        final_cents = ledger[-1].closing_cents
+
+    schedule = Schedule(
+        actions=sol.actions,
+        objective=sol.objective,
+        final_closing_cents=final_cents,
+        ledger=ledger,
+    )
+    return CPSATSolveResult(
+        schedule=schedule,
+        solver="cpsat",
+        statuses=sol.statuses,
+        solve_seconds=sol.solve_seconds,
+    )
+
+
+def solve(
+    plan: Plan,
+    *,
+    options: Optional[CPSATSolveOptions] = None,
+    dp_fallback: bool = True,
+) -> Schedule:
+    """Solve a plan using CP-SAT and return only the schedule."""
+
+    return solve_with_diagnostics(plan, options=options, dp_fallback=dp_fallback).schedule

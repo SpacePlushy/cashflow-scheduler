@@ -50,6 +50,14 @@ export interface SolveResponse {
   final_closing: string;
   ledger: LedgerRow[];
   checks: ValidationCheck[];
+  solver: SolverMeta;
 }
 
 export type ExportFormat = "md" | "csv" | "json";
+
+export interface SolverMeta {
+  name: "cpsat" | "dp";
+  statuses: string[];
+  seconds: number;
+  fallback_reason?: string;
+}

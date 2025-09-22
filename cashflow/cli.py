@@ -10,7 +10,11 @@ from .io.store import load_plan
 from .engines.dp import solve as dp_solve
 from .core.ledger import build_ledger
 from .core.validate import validate
-from .engines.cpsat import verify_lex_optimal
+from .engines.cpsat import (
+    verify_lex_optimal,
+    solve_with_diagnostics,
+    CPSATSolveResult,
+)
 from .io.render import render_markdown, build_rich_table
 from .io.calendar import render_calendar_png
 from .core.model import Adjustment, to_cents
@@ -37,13 +41,49 @@ def _load_plan_or_exit(path: Path):
         raise typer.Exit(code=2)
 
 
+def _solve_plan(plan, solver: str = "cpsat") -> CPSATSolveResult:
+    backend = solver.lower()
+    if backend == "dp":
+        schedule = dp_solve(plan)
+        return CPSATSolveResult(
+            schedule=schedule,
+            solver="dp",
+            statuses=[],
+            solve_seconds=0.0,
+        )
+    if backend != "cpsat":
+        raise typer.BadParameter(f"Unknown solver backend: {solver}")
+    return solve_with_diagnostics(plan)
+
+
+def _echo_solver_summary(result: CPSATSolveResult):
+    solver_label = result.solver.upper()
+    if result.solver == "cpsat":
+        typer.secho(
+            f"Solver: {solver_label} ({result.solve_seconds:.2f}s)",
+            fg=typer.colors.GREEN,
+        )
+    else:
+        note = " (fallback)" if result.fallback_reason else ""
+        typer.secho(
+            f"Solver: {solver_label}{note}",
+            fg=typer.colors.YELLOW,
+        )
+        if result.fallback_reason:
+            typer.secho(f"Reason: {result.fallback_reason}", fg=typer.colors.YELLOW)
+
+
 @app.command("solve")
 def cmd_solve(
-    plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json")
+    plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json"),
+    solver: str = typer.Option(
+        "cpsat", "--solver", help="Select solver backend (cpsat or dp)."
+    ),
 ):
     path = Path(plan_path) if plan_path else _default_plan_path()
     plan = _load_plan_or_exit(path)
-    schedule = dp_solve(plan)
+    result = _solve_plan(plan, solver)
+    schedule = result.schedule
     report = validate(plan, schedule)
     printed = False
     if sys.stdout.isatty() and os.environ.get("CF_FORCE_MARKDOWN") != "1":
@@ -63,13 +103,20 @@ def cmd_solve(
         typer.echo(f"- {name}: {'[x]' if ok else '[ ]'} {detail}")
     if not report.ok:
         raise typer.Exit(code=2)
+    _echo_solver_summary(result)
 
 
 @app.command("show")
-def cmd_show(plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json")):
+def cmd_show(
+    plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json"),
+    solver: str = typer.Option(
+        "cpsat", "--solver", help="Select solver backend (cpsat or dp)."
+    ),
+):
     path = Path(plan_path) if plan_path else _default_plan_path()
     plan = _load_plan_or_exit(path)
-    schedule = dp_solve(plan)
+    result = _solve_plan(plan, solver)
+    schedule = result.schedule
     printed = False
     if sys.stdout.isatty() and os.environ.get("CF_FORCE_MARKDOWN") != "1":
         try:
@@ -81,6 +128,7 @@ def cmd_show(plan_path: Optional[str] = typer.Argument(None, help="Path to plan.
             printed = False
     if not printed:
         typer.echo(render_markdown(schedule))
+    _echo_solver_summary(result)
 
 
 @app.command("export")
@@ -88,10 +136,13 @@ def cmd_export(
     plan_path: Optional[str] = typer.Argument(None, help="Path to plan.json"),
     format: str = typer.Option("md", help="md|csv|json (md supported)"),
     out: str = typer.Option("schedule.md", help="Output file path"),
+    solver: str = typer.Option(
+        "cpsat", "--solver", help="Select solver backend (cpsat or dp)."
+    ),
 ):
     path = Path(plan_path) if plan_path else _default_plan_path()
     plan = _load_plan_or_exit(path)
-    schedule = dp_solve(plan)
+    schedule = _solve_plan(plan, solver).schedule
     if format != "md":
         typer.echo("Only markdown export is implemented at this time", err=True)
         raise typer.Exit(code=2)
@@ -144,6 +195,9 @@ def cmd_set_eod(
         "--calendar",
         help="Also render calendar PNG to ~/Downloads/cashflow_calendar.png",
     ),
+    solver: str = typer.Option(
+        "cpsat", "--solver", help="Select solver backend (cpsat or dp)."
+    ),
 ):
     """Adjust the plan so that Day `day` closes at `eod_amount`, lock days 1..day,
     and re-solve the remainder. Prints the new schedule and validation report.
@@ -169,7 +223,8 @@ def cmd_set_eod(
         Adjustment(day=day, amount_cents=delta, note="cli set-eod"),
     ]
 
-    schedule = dp_solve(plan)
+    result = _solve_plan(plan, solver)
+    schedule = result.schedule
     report = validate(plan, schedule)
     printed = False
     if sys.stdout.isatty() and os.environ.get("CF_FORCE_MARKDOWN") != "1":
@@ -188,6 +243,7 @@ def cmd_set_eod(
         typer.echo(f"- {name}: {'[x]' if ok else '[ ]'} {detail}")
     if not report.ok:
         raise typer.Exit(code=2)
+    _echo_solver_summary(result)
     if save_plan:
         # Persist an updated plan JSON with merged actions/adjustments
         try:

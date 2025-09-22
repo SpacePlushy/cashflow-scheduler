@@ -28,3 +28,5 @@ web/node_modules/
 htmlcov/
 
 .vercel
+playwright-report/
+test-results/

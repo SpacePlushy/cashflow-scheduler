@@ -15,6 +15,7 @@ from cashflow.io.render import render_markdown, render_csv, render_json
 from cashflow.core.ledger import build_ledger
 from cashflow.core.model import Adjustment, Plan
 from cashflow.io.store import plan_from_dict
+from cashflow.engines.cpsat import solve_with_diagnostics
 
 
 app = FastAPI(title="Cashflow API (Serverless)")
@@ -40,9 +41,10 @@ async def solve(req: Request):
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
 
-    schedule = dp_solve(plan)
+    result = solve_with_diagnostics(plan)
+    schedule = result.schedule
     report = validate(plan, schedule)
-    return JSONResponse(_schedule_payload(schedule, report))
+    return JSONResponse(_schedule_payload(schedule, report, result))
 
 
 @app.post("/set_eod")
@@ -68,10 +70,11 @@ async def set_eod(req: Request):
     plan.manual_adjustments = list(plan.manual_adjustments) + [
         Adjustment(day=day, amount_cents=delta, note="api set-eod"),
     ]
-    schedule = dp_solve(plan)
+    result = solve_with_diagnostics(plan)
+    schedule = result.schedule
     report = validate(plan, schedule)
 
-    return JSONResponse(_schedule_payload(schedule, report))
+    return JSONResponse(_schedule_payload(schedule, report, result))
 
 
 @app.post("/export")
@@ -86,7 +89,8 @@ async def export(req: Request):
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
 
-    schedule = dp_solve(plan)
+    result = solve_with_diagnostics(plan)
+    schedule = result.schedule
     if fmt == "md":
         content = render_markdown(schedule)
     elif fmt == "csv":
@@ -125,8 +129,8 @@ def _plan_from_payload(payload: Mapping[str, Any] | None) -> Plan:
     return plan_from_dict(payload)
 
 
-def _schedule_payload(schedule, report):
-    return {
+def _schedule_payload(schedule, report, diagnostics=None):
+    payload = {
         "actions": schedule.actions,
         "objective": list(schedule.objective),
         "final_closing": _cents_to_str(schedule.ledger[-1].closing_cents),
@@ -144,6 +148,15 @@ def _schedule_payload(schedule, report):
         ],
         "checks": report.checks,
     }
+    if diagnostics is not None:
+        payload["solver"] = {
+            "name": diagnostics.solver,
+            "statuses": diagnostics.statuses,
+            "seconds": diagnostics.solve_seconds,
+        }
+        if diagnostics.fallback_reason:
+            payload["solver"]["fallback_reason"] = diagnostics.fallback_reason
+    return payload
 
 
 def _cents_to_str(amount: int) -> str:
