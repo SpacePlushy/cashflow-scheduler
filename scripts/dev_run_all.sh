@@ -7,8 +7,27 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_PORT=8000
 FRONTEND_PORT=3000
-API_URL="http://127.0.0.1:${BACKEND_PORT}"
-UI_URL="http://localhost:${FRONTEND_PORT}"
+BACKEND_BIND_HOST="${DEV_BACKEND_HOST:-0.0.0.0}"
+PUBLIC_HOST_DEFAULT=$(python3 - <<'PY'
+import socket
+
+def get_ip() -> str:
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+print(get_ip())
+PY
+)
+PUBLIC_HOST="${DEV_PUBLIC_HOST:-$PUBLIC_HOST_DEFAULT}"
+API_URL="${DEV_PUBLIC_API_URL:-http://${PUBLIC_HOST}:${BACKEND_PORT}}"
+UI_HOST="${DEV_UI_HOST:-localhost}"
+UI_URL="http://${UI_HOST}:${FRONTEND_PORT}"
 BACKEND_LOG="$ROOT_DIR/.tmp/backend.log"
 FRONTEND_LOG="$ROOT_DIR/.tmp/frontend.log"
 
@@ -45,7 +64,7 @@ fi
 
 printf '[2/5] Starting FastAPI backend on %s...\n' "$API_URL"
 pushd "$ROOT_DIR" >/dev/null
-python3 -m uvicorn api.index:app --port "$BACKEND_PORT" \
+python3 -m uvicorn api.index:app --host "$BACKEND_BIND_HOST" --port "$BACKEND_PORT" \
   --reload >"$BACKEND_LOG" 2>&1 &
 BACKEND_PID=$!
 popd >/dev/null

@@ -73,9 +73,35 @@ export default function Home() {
     }
   };
 
+  const renderStatusBanner = () => {
+    if (status === "loading") {
+      return (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 shadow-sm dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-200">
+          Solving schedule…
+        </div>
+      );
+    }
+    if (status === "error") {
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+          {error ?? "Failed to solve plan."}
+        </div>
+      );
+    }
+    if (status === "success" && result) {
+      return (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+          Solver finished in {result.solver.seconds.toFixed(2)}s using {result.solver.name.toUpperCase()}.
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 py-10 dark:bg-slate-950">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4">
+        {renderStatusBanner()}
         <header className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-sm transition-colors sm:flex-row sm:items-end sm:justify-between dark:bg-slate-900 dark:shadow-none">
           <div className="space-y-1">
             <p className="text-sm font-semibold uppercase tracking-wide text-blue-500 dark:text-blue-300">
