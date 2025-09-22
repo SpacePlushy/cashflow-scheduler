@@ -83,8 +83,9 @@ API (local dev)
 Web UI (Next.js)
 
 - Dev: `cd web && npm install && npm run dev` (http://localhost:3000)
-- API base: `NEXT_PUBLIC_API_BASE` (defaults to `http://127.0.0.1:8000` locally)
+- Configure API base: create `web/.env.local` with `NEXT_PUBLIC_SOLVER_API_URL=http://127.0.0.1:8000`
 - Build: `npm run build` inside `web/`
+- Features: guided plan editor, JSON import/export helpers, solve button with ledger + validation results, CSV/Markdown/JSON downloads via backend renderers
 
 Build, Test, Type, Lint
 

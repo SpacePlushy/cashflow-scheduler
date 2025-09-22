@@ -1,4 +1,0 @@
-:root { --bg: #0b0b0c; --text: #eaeaea; }
-html, body { margin:0; padding:0; background: var(--bg); color: var(--text); }
-button { background:#1b1b1f; color:var(--text); border:1px solid #2a2a2e; padding:6px 10px; border-radius:8px; cursor:pointer }
-table { color: var(--text) }

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Mapping, cast
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -11,7 +13,8 @@ from ._shared import (
 )
 from cashflow.io.render import render_markdown, render_csv, render_json
 from cashflow.core.ledger import build_ledger
-from cashflow.core.model import Adjustment
+from cashflow.core.model import Adjustment, Plan
+from cashflow.io.store import plan_from_dict
 
 
 app = FastAPI(title="Cashflow API (Serverless)")
@@ -29,41 +32,32 @@ async def health():
 
 
 @app.post("/solve")
-async def solve():
-    plan = _load_default_plan()
+async def solve(req: Request):
+    body = await _read_body(req)
+    try:
+        plan_payload = _extract_plan_payload(body)
+        plan = _plan_from_payload(plan_payload)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
     schedule = dp_solve(plan)
     report = validate(plan, schedule)
-
-    payload = {
-        "actions": schedule.actions,
-        "objective": list(schedule.objective),
-        "final_closing": f"{schedule.ledger[-1].closing_cents//100}.{schedule.ledger[-1].closing_cents%100:02d}",
-        "ledger": [
-            {
-                "day": r.day,
-                "opening": f"{r.opening_cents//100}.{r.opening_cents%100:02d}",
-                "deposits": f"{r.deposit_cents//100}.{r.deposit_cents%100:02d}",
-                "action": r.action,
-                "net": f"{r.net_cents//100}.{r.net_cents%100:02d}",
-                "bills": f"{r.bills_cents//100}.{r.bills_cents%100:02d}",
-                "closing": f"{r.closing_cents//100}.{r.closing_cents%100:02d}",
-            }
-            for r in schedule.ledger
-        ],
-        "checks": report.checks,
-    }
-    return JSONResponse(payload)
+    return JSONResponse(_schedule_payload(schedule, report))
 
 
 @app.post("/set_eod")
 async def set_eod(req: Request):
-    body = await req.json()
+    body = await _read_body(req)
     day = int(body.get("day", 0))
     eod_amount = float(body.get("eod_amount", 0))
     if not (1 <= day <= 30):
         return JSONResponse({"error": "day must be in 1..30"}, status_code=400)
 
-    plan = _load_default_plan()
+    try:
+        plan = _plan_from_payload(body.get("plan"))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
     baseline = dp_solve(plan)
     base_ledger = build_ledger(plan, baseline.actions)
     current_eod = base_ledger[day - 1].closing_cents
@@ -77,34 +71,21 @@ async def set_eod(req: Request):
     schedule = dp_solve(plan)
     report = validate(plan, schedule)
 
-    payload = {
-        "actions": schedule.actions,
-        "objective": list(schedule.objective),
-        "final_closing": f"{schedule.ledger[-1].closing_cents//100}.{schedule.ledger[-1].closing_cents%100:02d}",
-        "ledger": [
-            {
-                "day": r.day,
-                "opening": f"{r.opening_cents//100}.{r.opening_cents%100:02d}",
-                "deposits": f"{r.deposit_cents//100}.{r.deposit_cents%100:02d}",
-                "action": r.action,
-                "net": f"{r.net_cents//100}.{r.net_cents%100:02d}",
-                "bills": f"{r.bills_cents//100}.{r.bills_cents%100:02d}",
-                "closing": f"{r.closing_cents//100}.{r.closing_cents%100:02d}",
-            }
-            for r in schedule.ledger
-        ],
-        "checks": report.checks,
-    }
-    return JSONResponse(payload)
+    return JSONResponse(_schedule_payload(schedule, report))
 
 
 @app.post("/export")
 async def export(req: Request):
-    body = await req.json()
+    body = await _read_body(req)
     fmt = str(body.get("format", "md")).lower()
     if fmt not in ("md", "csv", "json"):
         return JSONResponse({"error": "format must be md|csv|json"}, status_code=400)
-    plan = _load_default_plan()
+
+    try:
+        plan = _plan_from_payload(body.get("plan"))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
     schedule = dp_solve(plan)
     if fmt == "md":
         content = render_markdown(schedule)
@@ -113,3 +94,57 @@ async def export(req: Request):
     else:
         content = render_json(schedule)
     return JSONResponse({"format": fmt, "content": content})
+
+
+async def _read_body(req: Request) -> Mapping[str, Any]:
+    try:
+        payload = await req.json()
+    except Exception:
+        return {}
+    if isinstance(payload, Mapping):
+        return payload
+    return {}
+
+
+def _extract_plan_payload(body: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    if "plan" in body and isinstance(body["plan"], Mapping):
+        return cast(Mapping[str, Any], body["plan"])
+    if _looks_like_plan(body):
+        return body
+    return None
+
+
+def _looks_like_plan(obj: Mapping[str, Any]) -> bool:
+    required = {"start_balance", "target_end", "band", "rent_guard"}
+    return required.issubset(obj.keys())
+
+
+def _plan_from_payload(payload: Mapping[str, Any] | None) -> Plan:
+    if payload is None:
+        return _load_default_plan()
+    return plan_from_dict(payload)
+
+
+def _schedule_payload(schedule, report):
+    return {
+        "actions": schedule.actions,
+        "objective": list(schedule.objective),
+        "final_closing": _cents_to_str(schedule.ledger[-1].closing_cents),
+        "ledger": [
+            {
+                "day": row.day,
+                "opening": _cents_to_str(row.opening_cents),
+                "deposits": _cents_to_str(row.deposit_cents),
+                "action": row.action,
+                "net": _cents_to_str(row.net_cents),
+                "bills": _cents_to_str(row.bills_cents),
+                "closing": _cents_to_str(row.closing_cents),
+            }
+            for row in schedule.ledger
+        ],
+        "checks": report.checks,
+    }
+
+
+def _cents_to_str(amount: int) -> str:
+    return f"{amount // 100}.{amount % 100:02d}"
