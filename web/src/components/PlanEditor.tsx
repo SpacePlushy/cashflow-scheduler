@@ -10,9 +10,10 @@ interface PlanEditorProps {
 }
 
 const fieldClass =
-  "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200";
+  "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/30";
 
-const sectionClass = "space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm";
+const sectionClass =
+  "space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:shadow-none";
 
 function sanitizeNumber(value: string): number {
   if (value === "") {
@@ -44,21 +45,27 @@ export function PlanEditor({ plan, onChange }: PlanEditorProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900">Plan Builder</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Plan Builder
+        </h2>
         <button
           type="button"
           onClick={handleReset}
-          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           Reset to Example
         </button>
       </div>
 
       <section className={sectionClass}>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Balances</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+          Balances
+        </h3>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-slate-600">Starting Balance ($)</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+              Starting Balance ($)
+            </span>
             <input
               type="number"
               step="0.01"
@@ -70,7 +77,9 @@ export function PlanEditor({ plan, onChange }: PlanEditorProps) {
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-slate-600">Target End Balance ($)</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+              Target End Balance ($)
+            </span>
             <input
               type="number"
               step="0.01"
@@ -82,7 +91,9 @@ export function PlanEditor({ plan, onChange }: PlanEditorProps) {
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-slate-600">Band Width ($)</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+              Band Width ($)
+            </span>
             <input
               type="number"
               step="0.01"
@@ -92,7 +103,9 @@ export function PlanEditor({ plan, onChange }: PlanEditorProps) {
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-slate-600">Rent Guard ($)</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+              Rent Guard ($)
+            </span>
             <input
               type="number"
               step="0.01"
@@ -148,26 +161,32 @@ function DepositsEditor({ deposits, onChange }: DepositsEditorProps) {
   return (
     <section className={sectionClass}>
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Deposits</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+          Deposits
+        </h3>
         <button
           type="button"
           onClick={handleAdd}
-          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           Add Deposit
         </button>
       </div>
       <div className="space-y-3">
         {deposits.length === 0 && (
-          <p className="text-sm text-slate-500">No deposits set. Add at least one paycheck.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            No deposits set. Add at least one paycheck.
+          </p>
         )}
         {deposits.map((deposit, index) => (
           <div
             key={`${deposit.day}-${index}`}
-            className="grid gap-3 rounded-md border border-slate-200 p-3 md:grid-cols-3"
+            className="grid gap-3 rounded-md border border-slate-200 p-3 transition-colors md:grid-cols-3 dark:border-slate-700"
           >
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-600">Day</span>
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                Day
+              </span>
               <input
                 type="number"
                 min={1}
@@ -178,7 +197,9 @@ function DepositsEditor({ deposits, onChange }: DepositsEditorProps) {
               />
             </label>
             <label className="flex flex-col gap-1 md:col-span-2">
-              <span className="text-xs font-medium text-slate-600">Amount ($)</span>
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                Amount ($)
+              </span>
               <input
                 type="number"
                 step="0.01"
@@ -191,7 +212,7 @@ function DepositsEditor({ deposits, onChange }: DepositsEditorProps) {
               <button
                 type="button"
                 onClick={() => handleRemove(index)}
-                className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-500/10"
               >
                 Remove
               </button>
@@ -239,26 +260,32 @@ function BillsEditor({ bills, onChange }: BillsEditorProps) {
   return (
     <section className={sectionClass}>
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Bills</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+          Bills
+        </h3>
         <button
           type="button"
           onClick={handleAdd}
-          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           Add Bill
         </button>
       </div>
       <div className="space-y-3">
         {bills.length === 0 && (
-          <p className="text-sm text-slate-500">No bills yet. Add recurring expenses to constrain the solver.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            No bills yet. Add recurring expenses to constrain the solver.
+          </p>
         )}
         {bills.map((bill, index) => (
           <div
             key={`${bill.day}-${bill.name}-${index}`}
-            className="grid gap-3 rounded-md border border-slate-200 p-3 md:grid-cols-4"
+            className="grid gap-3 rounded-md border border-slate-200 p-3 transition-colors md:grid-cols-4 dark:border-slate-700"
           >
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-600">Day</span>
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                Day
+              </span>
               <input
                 type="number"
                 min={1}
@@ -269,7 +296,9 @@ function BillsEditor({ bills, onChange }: BillsEditorProps) {
               />
             </label>
             <label className="flex flex-col gap-1 md:col-span-2">
-              <span className="text-xs font-medium text-slate-600">Name</span>
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                Name
+              </span>
               <input
                 type="text"
                 className={fieldClass}
@@ -278,7 +307,9 @@ function BillsEditor({ bills, onChange }: BillsEditorProps) {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-600">Amount ($)</span>
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                Amount ($)
+              </span>
               <input
                 type="number"
                 step="0.01"
@@ -291,7 +322,7 @@ function BillsEditor({ bills, onChange }: BillsEditorProps) {
               <button
                 type="button"
                 onClick={() => handleRemove(index)}
-                className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-500/10"
               >
                 Remove
               </button>
