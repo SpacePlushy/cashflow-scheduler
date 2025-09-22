@@ -16,7 +16,8 @@ def test_randomized_target_and_band_keeps_validity(delta, band_extra):
     plan = load_plan("plan.json")
     # Adjust target modestly and keep band at least canonical + extra
     plan.target_end_cents = plan.target_end_cents + delta
-    plan.band_cents = max(plan.band_cents, 2500 + band_extra)
+    # With Spark-only $100 steps, any target can be reached if band >= $50.
+    plan.band_cents = max(plan.band_cents, 5000 + band_extra)
     schedule = solve(plan)
     report = validate(plan, schedule)
     assert report.ok
