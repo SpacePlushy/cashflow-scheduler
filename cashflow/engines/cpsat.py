@@ -89,6 +89,9 @@ class CPSATSolveOptions:
 
     max_time_seconds: Optional[float] = 10.0
     num_search_workers: Optional[int] = 8
+    warm_start_actions: Optional[List[str]] = None
+    search_branching: Optional[int] = None
+    log_search_progress: bool = False
 
 
 @dataclass
@@ -120,7 +123,11 @@ class VerificationReport:
     statuses: Optional[List[str]] = None
 
 
-def _build_model(plan: Plan):
+def _build_model(
+    plan: Plan,
+    *,
+    warm_start_actions: Optional[List[str]] = None,
+):
     """Construct the CP-SAT model for a given `plan`.
 
     Returns: (model, x, obj_parts, final_close)
@@ -135,6 +142,7 @@ def _build_model(plan: Plan):
       balance on day t.
     - pre_rent_base_on_day30(plan, dep, bills): base amount for the pre-rent
       guard constraint on Day-30.
+    - warm_start_actions: optional 30-length list used to seed solver hints.
     """
     assert cp_model is not None, "OR-Tools CP-SAT not available"
 
@@ -154,9 +162,15 @@ def _build_model(plan: Plan):
     # Adjacent-pair indicators for (work,work) and (off,off).
     b2b = [model.NewBoolVar(f"b2b_{t}") for t in range(29)]
     oo = [model.NewBoolVar(f"oo_{t}") for t in range(29)]
-    # Cumulative sum of action deltas (in cents) up to day t.
-    # Upper bound is a safe coarse cap to keep domains finite.
-    prefix_net = [model.NewIntVar(0, 12000 * (t + 1), f"pref_{t}") for t in range(30)]
+    # Cumulative sum of action deltas (in cents) up to day t with tight bounds.
+    max_delta = max(SHIFT_NET_CENTS.values()) if SHIFT_NET_CENTS else 0
+    min_delta = min(SHIFT_NET_CENTS.values()) if SHIFT_NET_CENTS else 0
+    prefix_net = []
+    for t in range(30):
+        horizon = t + 1
+        lower = min(0, min_delta * horizon)
+        upper = max(0, max_delta * horizon)
+        prefix_net.append(model.NewIntVar(lower, upper, f"pref_{t}"))
     final_close = model.NewIntVar(-(10**9), 10**9, "final_close")
     abs_diff = model.NewIntVar(0, 10**9, "abs_diff")
 
@@ -259,6 +273,36 @@ def _build_model(plan: Plan):
     # - single_pen: final tie-breaker to prefer Medium over Large, and avoid
     #   unnecessary Mediums as well.
 
+    if warm_start_actions is not None:
+        if len(warm_start_actions) != 30:
+            raise ValueError("warm_start_actions must have length 30")
+        running_prefix = 0
+        for t, action in enumerate(warm_start_actions):
+            if action not in IDX:
+                continue
+            idx = IDX[action]
+            model.AddHint(x[t][idx], 1)
+            is_off = action == "O"
+            model.AddHint(off[t], 1 if is_off else 0)
+            model.AddHint(w[t], 0 if is_off else 1)
+            running_prefix += SHIFT_NET_CENTS.get(action, 0)
+            model.AddHint(prefix_net[t], running_prefix)
+            if t < 29:
+                next_action = warm_start_actions[t + 1]
+                if next_action in IDX:
+                    next_is_off = next_action == "O"
+                    model.AddHint(b2b[t], 0 if (is_off or next_is_off) else 1)
+                    model.AddHint(oo[t], 1 if (is_off and next_is_off) else 0)
+        model.AddHint(final_close, base[30] + running_prefix)
+
+    if cp_model is not None:
+        for t in range(30):
+            model.AddDecisionStrategy(
+                x[t],
+                cp_model.CHOOSE_FIRST,
+                cp_model.SELECT_MAX_VALUE,
+            )
+
     return model, x, (workdays, b2b_sum, abs_diff, large_days, single_pen), final_close
 
 
@@ -278,15 +322,19 @@ def enumerate_ties(plan: Plan, limit: int = 5) -> List[CPSATSolution]:
         raise RuntimeError("OR-Tools CP-SAT not installed")
 
     # First, get the optimal objective via sequential lex optimization
-    model_opt, x_opt, obj_parts, final_close_opt = _build_model(plan)
-    solver_opt = cp_model.CpSolver()
     opts = CPSATSolveOptions()
+    model_opt, x_opt, obj_parts, final_close_opt = _build_model(
+        plan, warm_start_actions=opts.warm_start_actions
+    )
+    solver_opt = cp_model.CpSolver()
     w, b2b, absd, large, sp, _, _ = _solve_sequential_lex(
         model_opt, obj_parts, solver_opt, opts
     )
 
     # Build a fresh model with the same constraints and fix the objective parts to the optimal values
-    model, x, obj_parts2, final_close = _build_model(plan)
+    model, x, obj_parts2, final_close = _build_model(
+        plan, warm_start_actions=opts.warm_start_actions
+    )
     workdays, b2b_sum, abs_diff, large_days, single_pen = obj_parts2
     model.Add(workdays == w)
     model.Add(b2b_sum == b2b)
@@ -376,6 +424,7 @@ def _solve_sequential_lex(
 
     statuses: List[str] = []
     total_wall = 0.0
+    last_wall = 0.0
 
     if options.max_time_seconds is not None:
         solver.parameters.max_time_in_seconds = options.max_time_seconds
@@ -383,6 +432,9 @@ def _solve_sequential_lex(
         solver.parameters.max_time_in_seconds = 0.0
     if options.num_search_workers is not None:
         solver.parameters.num_search_workers = options.num_search_workers
+    if options.search_branching is not None:
+        solver.parameters.search_branching = options.search_branching
+    solver.parameters.log_search_progress = options.log_search_progress
 
     # 1) Minimize workdays
     model.Minimize(workdays)
@@ -391,7 +443,9 @@ def _solve_sequential_lex(
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed to find a solution for objective 1")
     best_work = solver.Value(workdays)
-    total_wall += solver.WallTime()
+    current_wall = solver.WallTime()
+    total_wall += current_wall - last_wall
+    last_wall = current_wall
     model.Add(workdays == best_work)
 
     # 2) Minimize b2b
@@ -401,7 +455,9 @@ def _solve_sequential_lex(
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 2")
     best_b2b = solver.Value(b2b_sum)
-    total_wall += solver.WallTime()
+    current_wall = solver.WallTime()
+    total_wall += current_wall - last_wall
+    last_wall = current_wall
     model.Add(b2b_sum == best_b2b)
 
     # 3) Minimize abs_diff
@@ -411,7 +467,9 @@ def _solve_sequential_lex(
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 3")
     best_abs = solver.Value(abs_diff)
-    total_wall += solver.WallTime()
+    current_wall = solver.WallTime()
+    total_wall += current_wall - last_wall
+    last_wall = current_wall
     model.Add(abs_diff == best_abs)
 
     # 4) Minimize large_days
@@ -421,7 +479,9 @@ def _solve_sequential_lex(
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 4")
     best_large = solver.Value(large_days)
-    total_wall += solver.WallTime()
+    current_wall = solver.WallTime()
+    total_wall += current_wall - last_wall
+    last_wall = current_wall
     model.Add(large_days == best_large)
 
     # 5) Minimize single_pen (final tie-breaker among Large/Medium usage)
@@ -430,7 +490,9 @@ def _solve_sequential_lex(
     statuses.append(_status_name(r))
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("CP-SAT failed for objective 5")
-    total_wall += solver.WallTime()
+    current_wall = solver.WallTime()
+    total_wall += current_wall - last_wall
+    last_wall = current_wall
 
     return (
         best_work,
@@ -449,7 +511,9 @@ def solve_lex(plan: Plan, options: Optional[CPSATSolveOptions] = None) -> CPSATS
         raise RuntimeError("OR-Tools CP-SAT not installed")
 
     opts = options or CPSATSolveOptions()
-    model, x, obj_parts, final_close = _build_model(plan)
+    model, x, obj_parts, final_close = _build_model(
+        plan, warm_start_actions=opts.warm_start_actions
+    )
     solver = cp_model.CpSolver()
     w, b2b, absd, large, sp, statuses, wall = _solve_sequential_lex(
         model, obj_parts, solver, opts
@@ -486,7 +550,13 @@ def verify_lex_optimal(plan: Plan, schedule_dp) -> VerificationReport:
     per-stage statuses. If OR-Tools is not available, the report explains why.
     """
     try:
-        sol = solve_lex(plan)
+        warm_start = (
+            list(schedule_dp.actions)
+            if len(schedule_dp.actions) == 30
+            else None
+        )
+        opts = CPSATSolveOptions(warm_start_actions=warm_start)
+        sol = solve_lex(plan, options=opts)
     except Exception as e:  # pragma: no cover - dependent on OR-Tools
         return VerificationReport(
             ok=False,
