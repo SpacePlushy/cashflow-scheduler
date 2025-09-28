@@ -1,6 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  BadgeCheck,
+  CheckCircle2,
+  Download,
+  Info,
+  Loader2,
+  ShieldAlert,
+} from "lucide-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExportFormat, Plan, SolveResponse } from "@/lib/types";
 import { exportPlan } from "@/lib/api";
 
@@ -11,14 +41,41 @@ interface ResultsViewProps {
   error: string | null;
 }
 
-const tableClass = "min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700";
-const headerCellClass =
-  "bg-slate-50 px-3 py-2 text-left font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300";
-const cellClass = "px-3 py-2 text-slate-800 dark:text-slate-200";
+const EXPORT_FORMATS: ExportFormat[] = ["md", "csv", "json"];
+const NUMERIC_HEAD_CLASS = "text-right";
+const NUMERIC_CELL_CLASS = "text-right font-mono tabular-nums";
+const ACTION_CELL_CLASS = "text-center font-medium uppercase tracking-wide";
+
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+});
+
+function formatCurrency(value: string) {
+  const parsed = Number(value);
+  if (Number.isFinite(parsed)) {
+    return currencyFormatter.format(parsed);
+  }
+  return `$${value}`;
+}
 
 export function ResultsView({ plan, result, status, error }: ResultsViewProps) {
-  const [downloadStatus, setDownloadStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [downloadStatus, setDownloadStatus] = useState<"idle" | "loading" | "error">(
+    "idle",
+  );
   const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const solverSummary = useMemo(() => {
+    if (!result) return null;
+    return {
+      solverName: result.solver.name.toUpperCase(),
+      runtime: `${result.solver.seconds.toFixed(2)}s`,
+      fallback: result.solver.fallback_reason,
+      statuses: result.solver.statuses,
+      finalClosing: formatCurrency(result.final_closing),
+    };
+  }, [result]);
 
   const handleDownload = async (format: ExportFormat) => {
     if (!result) return;
@@ -42,152 +99,227 @@ export function ResultsView({ plan, result, status, error }: ResultsViewProps) {
 
   if (status === "idle") {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-slate-500 transition-colors dark:border-slate-700 dark:text-slate-400">
-        Configure your plan and run the solver to see results here.
-      </div>
+      <Card className="border-dashed" id="overview">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">Run the solver to see results</CardTitle>
+          <CardDescription>
+            Configure your plan, then start a solve to inspect ledger details and validation checks.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 
   if (status === "loading") {
     return (
       <div className="space-y-4">
-        <div className="h-4 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-        <div className="h-4 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-        <div className="h-4 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-80 w-full" />
       </div>
     );
   }
 
   if (status === "error") {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
-        {error ?? "An unexpected error occurred."}
-      </div>
+      <Alert variant="destructive" className="border border-destructive/40">
+        <ShieldAlert className="mt-1" />
+        <AlertTitle>Solver failed</AlertTitle>
+        <AlertDescription>{error ?? "An unexpected error occurred."}</AlertDescription>
+      </Alert>
     );
   }
 
-  if (!result) {
+  if (!result || !solverSummary) {
     return null;
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
-          Solver
-        </h3>
-        <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
-          Backend: <strong>{result.solver.name.toUpperCase()}</strong>
-          {" "}
-          ({result.solver.seconds.toFixed(2)}s)
-        </p>
-        {result.solver.fallback_reason && (
-          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-            Fallback reason: {result.solver.fallback_reason}
-          </p>
-        )}
-        {result.solver.statuses.length > 0 && (
-          <div className="mt-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Stage statuses
-            </p>
-            <ul className="mt-1 grid gap-1 text-xs text-slate-600 dark:text-slate-300">
-              {result.solver.statuses.map((stage, idx) => (
-                <li key={`${stage}-${idx}`}>Stage {idx + 1}: {stage}</li>
+    <div className="space-y-6" id="verification">
+      <Card>
+        <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              Solver
+              <Badge variant="secondary" className="uppercase">
+                {solverSummary.solverName}
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Runtime {solverSummary.runtime}
+              {solverSummary.fallback && (
+                <span className="ml-2 inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                  <AlertTriangle className="size-3" />
+                  {solverSummary.fallback}
+                </span>
+              )}
+            </CardDescription>
+          </div>
+          {solverSummary.statuses.length > 0 && (
+            <div className="flex flex-wrap gap-2 text-xs">
+              {solverSummary.statuses.map((stage, index) => (
+                <Badge key={`${stage}-${index}`} variant="outline" className="uppercase">
+                  Stage {index + 1}: {stage}
+                </Badge>
               ))}
-            </ul>
+            </div>
+          )}
+        </CardHeader>
+      </Card>
+
+      <Card id="exports">
+        <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-lg font-semibold">Solver Output</CardTitle>
+            <CardDescription>Final closing balance {solverSummary.finalClosing}</CardDescription>
           </div>
-        )}
-      </section>
-
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            Solver Output
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-300">
-            Final closing balance ${result.final_closing}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {(["md", "csv", "json"] as ExportFormat[]).map((format) => (
-            <button
-              key={format}
-              type="button"
-              onClick={() => handleDownload(format)}
-              className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              Download {format.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {downloadStatus === "error" && downloadError && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
-          {downloadError}
-        </div>
-      )}
-
-      <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-colors md:grid-cols-2 dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
-            Objective Vector
-          </h3>
-          <div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-700 dark:text-slate-200">
-            {result.objective.map((value, index) => (
-              <span key={index} className="rounded bg-slate-100 px-2 py-1 dark:bg-slate-800">
-                {value}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
-            Checks
-          </h3>
-          <ul className="mt-2 space-y-2 text-sm">
-            {result.checks.map(([label, ok, detail]) => (
-              <li
-                key={label}
-                className={`flex flex-col rounded border px-3 py-2 transition ${ok ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200" : "border-red-200 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300"}`}
+          <div className="flex flex-wrap gap-2">
+            {EXPORT_FORMATS.map((format) => (
+              <Button
+                key={format}
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownload(format)}
+                disabled={downloadStatus === "loading"}
               >
-                <span className="font-medium">{label}</span>
-                <span className="text-xs opacity-80 dark:text-slate-300">{detail}</span>
-              </li>
+                {downloadStatus === "loading" ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 size-4" />
+                )}
+                {format.toUpperCase()}
+              </Button>
             ))}
-          </ul>
-        </div>
-      </section>
+          </div>
+        </CardHeader>
+        {downloadStatus === "error" && downloadError && (
+          <CardContent>
+            <Alert variant="destructive" className="border border-destructive/40">
+              <AlertTitle>Download failed</AlertTitle>
+              <AlertDescription>{downloadError}</AlertDescription>
+            </Alert>
+          </CardContent>
+        )}
+      </Card>
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
-        <table className={tableClass}>
-          <thead>
-            <tr>
-              <th className={headerCellClass}>Day</th>
-              <th className={headerCellClass}>Opening</th>
-              <th className={headerCellClass}>Deposits</th>
-              <th className={headerCellClass}>Action</th>
-              <th className={headerCellClass}>Net</th>
-              <th className={headerCellClass}>Bills</th>
-              <th className={headerCellClass}>Closing</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-            {result.ledger.map((row) => (
-              <tr key={row.day}>
-                <td className={`${cellClass} font-medium`}>{row.day}</td>
-                <td className={cellClass}>${row.opening}</td>
-                <td className={cellClass}>${row.deposits}</td>
-                <td className={`${cellClass} font-medium`}>{row.action ?? "-"}</td>
-                <td className={cellClass}>${row.net}</td>
-                <td className={cellClass}>${row.bills}</td>
-                <td className={`${cellClass} font-semibold`}>${row.closing}</td>
-              </tr>
+      <Tabs defaultValue="checks" className="w-full">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h3 className="text-base font-semibold">Validation & Objective</h3>
+            <p className="text-sm text-muted-foreground">
+              Cross-check feasibility and inspect the lexicographic objective vector.
+            </p>
+          </div>
+          <TabsList>
+            <TabsTrigger value="checks" className="gap-1.5">
+              <BadgeCheck className="size-4" /> Checks
+            </TabsTrigger>
+            <TabsTrigger value="objective" className="gap-1.5">
+              <Info className="size-4" /> Objective
+            </TabsTrigger>
+          </TabsList>
+        </div>
+        <TabsContent value="checks" className="mt-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {result.checks.map(([label, ok, detail]) => (
+              <Card
+                key={label}
+                className={ok ? "border-emerald-300/60" : "border-destructive/40"}
+              >
+                <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+                  <CardTitle className="text-sm font-medium leading-tight">
+                    {label}
+                  </CardTitle>
+                  {ok ? (
+                    <Badge variant="secondary" className="gap-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                      <CheckCircle2 className="size-3" />
+                      Pass
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="gap-1">
+                      <AlertTriangle className="size-3" />
+                      Fail
+                    </Badge>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{detail}</p>
+                </CardContent>
+              </Card>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="objective" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Objective Vector</CardTitle>
+              <CardDescription>Lower is better; vector compares lexicographic stages.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {result.objective.map((value, index) => (
+                  <Badge key={`${value}-${index}`} variant="outline" className="px-3 py-1">
+                    Stage {index + 1}: {value}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">Daily Ledger</CardTitle>
+          <CardDescription>
+            Each row reflects the validated balance evolution used by the solver and validator.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-hidden rounded-lg border border-border/60 bg-card">
+            <Table className="min-w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[60px] text-center">Day</TableHead>
+                  <TableHead className={NUMERIC_HEAD_CLASS}>Opening</TableHead>
+                  <TableHead className={NUMERIC_HEAD_CLASS}>Deposits</TableHead>
+                  <TableHead className="text-center">Action</TableHead>
+                  <TableHead className={NUMERIC_HEAD_CLASS}>Net</TableHead>
+                  <TableHead className={NUMERIC_HEAD_CLASS}>Bills</TableHead>
+                  <TableHead className={NUMERIC_HEAD_CLASS}>Closing</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {result.ledger.map((row) => (
+                  <TableRow key={row.day} className="even:bg-primary/5">
+                    <TableCell className="text-center font-medium tabular-nums">
+                      {row.day}
+                    </TableCell>
+                    <TableCell className={NUMERIC_CELL_CLASS}>
+                      {formatCurrency(row.opening)}
+                    </TableCell>
+                    <TableCell className={NUMERIC_CELL_CLASS}>
+                      {formatCurrency(row.deposits)}
+                    </TableCell>
+                    <TableCell className={ACTION_CELL_CLASS}>
+                      {(row.action ?? "—").toString()}
+                    </TableCell>
+                    <TableCell className={NUMERIC_CELL_CLASS}>
+                      {formatCurrency(row.net)}
+                    </TableCell>
+                    <TableCell className={NUMERIC_CELL_CLASS}>
+                      {formatCurrency(row.bills)}
+                    </TableCell>
+                    <TableCell className={`${NUMERIC_CELL_CLASS} font-semibold`}>
+                      {formatCurrency(row.closing)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

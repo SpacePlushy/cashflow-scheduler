@@ -1,19 +1,24 @@
 "use client";
 
 import { useCallback } from "react";
-import { Plan, Deposit, Bill } from "@/lib/types";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Bill, Deposit, Plan } from "@/lib/types";
 import { createDefaultPlan } from "@/lib/defaultPlan";
 
 interface PlanEditorProps {
   plan: Plan;
   onChange: (next: Plan) => void;
 }
-
-const fieldClass =
-  "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/30";
-
-const sectionClass =
-  "space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:shadow-none";
 
 function sanitizeNumber(value: string): number {
   if (value === "") {
@@ -43,90 +48,79 @@ export function PlanEditor({ plan, onChange }: PlanEditorProps) {
   }, [onChange]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-          Plan Builder
-        </h2>
-        <button
-          type="button"
-          onClick={handleReset}
-          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-        >
+    <div className="space-y-6" id="plan">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">Plan Builder</h2>
+          <p className="text-sm text-muted-foreground">
+            Adjust balances, deposits, and bills before solving.
+          </p>
+        </div>
+        <Button variant="outline" onClick={handleReset} className="w-fit">
           Reset to Example
-        </button>
+        </Button>
       </div>
 
-      <section className={sectionClass}>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
-          Balances
-        </h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
-              Starting Balance ($)
-            </span>
-            <input
-              type="number"
-              step="0.01"
-              className={fieldClass}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle>Balances</CardTitle>
+          <CardDescription>
+            Define guard rails for the dynamic programming solver.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            <LabeledNumberField
+              label="Starting Balance ($)"
               value={plan.start_balance}
-              onChange={(event) =>
-                updatePlan({ start_balance: sanitizeNumber(event.target.value) })
-              }
+              onChange={(value) => updatePlan({ start_balance: value })}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
-              Target End Balance ($)
-            </span>
-            <input
-              type="number"
-              step="0.01"
-              className={fieldClass}
+            <LabeledNumberField
+              label="Target End Balance ($)"
               value={plan.target_end}
-              onChange={(event) =>
-                updatePlan({ target_end: sanitizeNumber(event.target.value) })
-              }
+              onChange={(value) => updatePlan({ target_end: value })}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
-              Band Width ($)
-            </span>
-            <input
-              type="number"
-              step="0.01"
-              className={fieldClass}
+            <LabeledNumberField
+              label="Band Width ($)"
               value={plan.band}
-              onChange={(event) => updatePlan({ band: sanitizeNumber(event.target.value) })}
+              onChange={(value) => updatePlan({ band: value })}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
-              Rent Guard ($)
-            </span>
-            <input
-              type="number"
-              step="0.01"
-              className={fieldClass}
+            <LabeledNumberField
+              label="Rent Guard ($)"
               value={plan.rent_guard}
-              onChange={(event) =>
-                updatePlan({ rent_guard: sanitizeNumber(event.target.value) })
-              }
+              onChange={(value) => updatePlan({ rent_guard: value })}
             />
-          </label>
-        </div>
-      </section>
+          </div>
+        </CardContent>
+      </Card>
 
       <DepositsEditor
         deposits={plan.deposits}
         onChange={(next) => updatePlan({ deposits: next })}
       />
 
-      <BillsEditor
-        bills={plan.bills}
-        onChange={(next) => updatePlan({ bills: next })}
+      <BillsEditor bills={plan.bills} onChange={(next) => updatePlan({ bills: next })} />
+    </div>
+  );
+}
+
+interface LabeledNumberFieldProps {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}
+
+function LabeledNumberField({ label, value, onChange }: LabeledNumberFieldProps) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+        {label}
+      </Label>
+      <Input
+        type="number"
+        step="0.01"
+        value={value}
+        onChange={(event) => onChange(sanitizeNumber(event.target.value))}
       />
     </div>
   );
@@ -159,68 +153,65 @@ function DepositsEditor({ deposits, onChange }: DepositsEditorProps) {
   };
 
   return (
-    <section className={sectionClass}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
-          Deposits
-        </h3>
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-        >
+    <Card>
+      <CardHeader className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle>Deposits</CardTitle>
+          <CardDescription>Schedule expected inflows by day of month.</CardDescription>
+        </div>
+        <Button variant="outline" onClick={handleAdd} className="w-fit">
           Add Deposit
-        </button>
-      </div>
-      <div className="space-y-3">
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
         {deposits.length === 0 && (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-muted-foreground">
             No deposits set. Add at least one paycheck.
           </p>
         )}
         {deposits.map((deposit, index) => (
           <div
             key={`${deposit.day}-${index}`}
-            className="grid gap-3 rounded-md border border-slate-200 p-3 transition-colors md:grid-cols-3 dark:border-slate-700"
+            className="grid gap-4 rounded-lg border border-border/60 bg-card/60 p-4 transition-colors md:grid-cols-[minmax(0,1fr),minmax(0,1fr),auto]"
           >
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                 Day
-              </span>
-              <input
+              </Label>
+              <Input
                 type="number"
                 min={1}
                 max={30}
-                className={fieldClass}
                 value={deposit.day}
                 onChange={(event) => handleChange(index, "day", event.target.value)}
               />
-            </label>
-            <label className="flex flex-col gap-1 md:col-span-2">
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            </div>
+            <div className="space-y-2 md:col-span-1">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                 Amount ($)
-              </span>
-              <input
+              </Label>
+              <Input
                 type="number"
                 step="0.01"
-                className={fieldClass}
                 value={deposit.amount}
                 onChange={(event) => handleChange(index, "amount", event.target.value)}
               />
-            </label>
-            <div className="flex items-end justify-end md:col-span-3">
-              <button
+            </div>
+            <div className="flex items-end justify-end">
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => handleRemove(index)}
-                className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-500/10"
+                className="font-medium text-destructive hover:text-destructive"
               >
                 Remove
-              </button>
+              </Button>
             </div>
           </div>
         ))}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -258,78 +249,74 @@ function BillsEditor({ bills, onChange }: BillsEditorProps) {
   };
 
   return (
-    <section className={sectionClass}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
-          Bills
-        </h3>
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-        >
+    <Card>
+      <CardHeader className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle>Bills</CardTitle>
+          <CardDescription>Constrain the schedule with required outflows.</CardDescription>
+        </div>
+        <Button variant="outline" onClick={handleAdd} className="w-fit">
           Add Bill
-        </button>
-      </div>
-      <div className="space-y-3">
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
         {bills.length === 0 && (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-muted-foreground">
             No bills yet. Add recurring expenses to constrain the solver.
           </p>
         )}
         {bills.map((bill, index) => (
           <div
             key={`${bill.day}-${bill.name}-${index}`}
-            className="grid gap-3 rounded-md border border-slate-200 p-3 transition-colors md:grid-cols-4 dark:border-slate-700"
+            className="grid gap-4 rounded-lg border border-border/60 bg-card/60 p-4 transition-colors md:grid-cols-[minmax(0,0.5fr),minmax(0,1fr),minmax(0,0.6fr),auto]"
           >
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                 Day
-              </span>
-              <input
+              </Label>
+              <Input
                 type="number"
                 min={1}
                 max={30}
-                className={fieldClass}
                 value={bill.day}
                 onChange={(event) => handleChange(index, "day", event.target.value)}
               />
-            </label>
-            <label className="flex flex-col gap-1 md:col-span-2">
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            </div>
+            <div className="space-y-2 md:col-span-1">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                 Name
-              </span>
-              <input
+              </Label>
+              <Input
                 type="text"
-                className={fieldClass}
                 value={bill.name}
                 onChange={(event) => handleChange(index, "name", event.target.value)}
               />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                 Amount ($)
-              </span>
-              <input
+              </Label>
+              <Input
                 type="number"
                 step="0.01"
-                className={fieldClass}
                 value={bill.amount}
                 onChange={(event) => handleChange(index, "amount", event.target.value)}
               />
-            </label>
-            <div className="flex items-end justify-end md:col-span-4">
-              <button
+            </div>
+            <div className="flex items-end justify-end">
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => handleRemove(index)}
-                className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-500/10"
+                className="font-medium text-destructive hover:text-destructive"
               >
                 Remove
-              </button>
+              </Button>
             </div>
           </div>
         ))}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
