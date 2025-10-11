@@ -2,12 +2,12 @@ import { Plan } from "./types";
 
 const basePlan: Plan = {
   start_balance: 90.5,
-  target_end: 490.5,
-  band: 25,
+  target_end: 90.5,
+  band: 100,
   rent_guard: 1636,
   deposits: [
-    { day: 11, amount: 1021 },
-    { day: 25, amount: 1021 },
+    { day: 10, amount: 1021 },
+    { day: 24, amount: 1021 },
   ],
   bills: [
     { day: 1, name: "Auto Insurance", amount: 177 },
@@ -22,7 +22,6 @@ const basePlan: Plan = {
     { day: 12, name: "Weed", amount: 20 },
     { day: 14, name: "iPad AppleCare", amount: 8.49 },
     { day: 16, name: "Cat Food", amount: 40 },
-    { day: 17, name: "Car Payment", amount: 463 },
     { day: 19, name: "Groceries", amount: 112.5 },
     { day: 19, name: "Weed", amount: 20 },
     { day: 22, name: "Cell Phone", amount: 177 },
