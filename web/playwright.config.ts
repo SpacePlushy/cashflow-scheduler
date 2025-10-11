@@ -1,30 +1,35 @@
-import { defineConfig } from '@playwright/test';
-
-const reuse = process.env.CI ? false : true;
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests/e2e',
-  timeout: 60_000,
-  expect: {
-    timeout: 10_000,
-  },
+  testDir: './e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',
-    headless: true,
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
   },
-  webServer: [
+  projects: [
     {
-      command: 'bash -lc "cd .. && python3 -m uvicorn api.index:app --host 127.0.0.1 --port 8000"',
-      port: 8000,
-      reuseExistingServer: reuse,
-      timeout: 120_000,
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
     },
     {
-      command:
-        'bash -lc "npm run build && NEXT_PUBLIC_SOLVER_API_URL=http://127.0.0.1:8000 npm run start"',
-      port: 3000,
-      reuseExistingServer: reuse,
-      timeout: 180_000,
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
     },
   ],
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+  },
 });

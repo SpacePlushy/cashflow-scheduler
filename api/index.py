@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Any, Mapping, cast
 
 from fastapi import FastAPI, Request
@@ -17,13 +18,16 @@ from cashflow.core.model import Adjustment, Plan
 from cashflow.io.store import plan_from_dict
 from cashflow.engines.cpsat import solve_with_diagnostics
 
+# Configure CORS origins from environment or use defaults
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 
 app = FastAPI(title="Cashflow API (Serverless)")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
+    allow_credentials=True,
 )
 
 

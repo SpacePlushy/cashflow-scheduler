@@ -1,41 +1,55 @@
-# Cashflow Scheduler Web UI
+# Cashflow Scheduler - Modern Web Frontend
 
-Browser interface for configuring monthly cashflow plans, running the dynamic programming solver, and reviewing results without the CLI.
-
-## Quick Start
-
-```bash
-cd web
-npm install        # already run via create-next-app, repeat when dependencies change
-npm run dev        # starts Next.js on http://localhost:3000
-```
-
-Set the solver API base URL with `.env.local`:
-
-```ini
-NEXT_PUBLIC_SOLVER_API_URL=http://localhost:8000
-```
-
-Run the FastAPI server locally via `uvicorn api.index:app --reload` (served on port 8000 by default), then visit `http://localhost:3000`.
+A beautiful, dark-mode-first Next.js 15 application for visualizing and optimizing 30-day cash flow schedules using constraint programming.
 
 ## Features
 
-- Guided form to edit balances, deposits, and bills
-- JSON import/export helpers for advanced edits
-- Solve button calls the Python DP solver and renders the ledger, objective vector, and validation checks
-- Download schedule as Markdown, CSV, or JSON using existing renderer endpoints
+### UI Components
 
-## Scripts
+- **Financial Summary Dashboard** - Key metrics at a glance:
+  - Total workdays required
+  - Final balance with target diff
+  - Schedule quality (back-to-back work pairs)
+  - Validation status
 
-| Command         | Description                         |
-| --------------- | ----------------------------------- |
-| `npm run dev`   | Start development server            |
-| `npm run build` | Production build with Turbopack     |
-| `npm run start` | Run built app (`npm run build` first)|
-| `npm run lint`  | ESLint check                        |
+- **30-Day Calendar Grid** - Interactive schedule visualization:
+  - Color-coded work/off days
+  - Balance indicators with color coding
+  - Deposit badges
+  - Detailed hover tooltips showing daily breakdowns
 
-## Next Steps
+- **Daily Ledger Table** - Complete financial breakdown:
+  - Scrollable table with 30-day history
+  - Color-coded balances and transactions
+  - Bills and deposits highlighted
 
-- Add automated component tests (RTL + Jest/Vitest) and happy-path Playwright E2E.
-- Expose solver flags (e.g., `forbid_large_after_day1`) as advanced toggles.
-- Implement Next.js route handlers as a proxy to the Python API for same-origin deployments.
+- **Validation Checks** - Real-time constraint verification
+
+### Modern Tech Stack
+
+- **Next.js 15** with App Router and React 19
+- **Tailwind CSS v4** for utility-first styling
+- **shadcn/ui** for beautiful, accessible components
+- **next-themes** for seamless dark/light mode switching
+- **TypeScript** for type safety
+- **Playwright** for comprehensive E2E testing
+
+## Getting Started
+
+```bash
+npm install
+npm run dev
+```
+
+Visit [http://localhost:3000](http://localhost:3000)
+
+## Testing
+
+```bash
+npm run test:e2e        # Run E2E tests
+npm run test:e2e:ui     # Run with Playwright UI
+```
+
+## License
+
+Same as parent project
