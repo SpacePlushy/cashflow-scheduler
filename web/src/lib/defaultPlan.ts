@@ -10,7 +10,7 @@ const basePlan: Plan = {
     { day: 24, amount: 1021 },
   ],
   bills: [
-    { day: 1, name: "Auto Insurance", amount: 177 },
+    { day: 1, name: "Auto Insurance", amount: 108 },
     { day: 2, name: "YouTube Premium", amount: 8 },
     { day: 5, name: "Groceries", amount: 112.5 },
     { day: 5, name: "Weed", amount: 20 },

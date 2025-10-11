@@ -16,7 +16,8 @@ def test_validate_detects_rule_failures():
         metadata={"case": "invalid"},
     )
 
-    actions = ["S"] * 30  # Violates Day-1 Large requirement and Off-Off rule
+    # Use "O" for all days - violates Day-1 Spark requirement and Off-Off rule
+    actions = ["O"] * 30
     ledger = []
     balance = 0
     for day in range(1, 31):
@@ -42,7 +43,7 @@ def test_validate_detects_rule_failures():
 
     schedule = Schedule(
         actions=actions,
-        objective=(0, 0, 0, 0, 0),
+        objective=(0, 0, 0),
         final_closing_cents=ledger[-1].closing_cents,
         ledger=ledger,
     )
@@ -51,8 +52,9 @@ def test_validate_detects_rule_failures():
     assert not report.ok
     results = {name: (ok, detail) for name, ok, detail in report.checks}
 
-    assert results["Day 1 Large"] == (False, "S")
+    assert results["Day 1 Spark"] == (False, "O")
     assert results["Non-negative balances"][0] is False
     assert results["Final within band"][0] is False
     assert results["Day-30 pre-rent guard"][0] is False
-    assert results["7-day Off,Off present"][0] is False
+    # All O's means there ARE consecutive off-days, so this check passes
+    assert results["7-day Off,Off present"][0] is True

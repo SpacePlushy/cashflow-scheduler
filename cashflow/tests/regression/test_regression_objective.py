@@ -13,5 +13,6 @@ def test_regression_objective_and_final():
     assert s1.final_closing_cents == s2.final_closing_cents
 
     # Lock current baseline (update if solver logic changes intentionally)
-    assert s1.objective == (22, 17, 1953)
-    assert s1.final_closing_cents == 51003
+    # Updated for low_bills branch: removed car payment, reduced auto insurance
+    assert s1.objective == (12, 0, 4847)
+    assert s1.final_closing_cents == 4203

@@ -73,22 +73,24 @@ def test_shift_pay_rate_change_adjusts_final_balance(monkeypatch):
     baseline_schedule = solve_with_diagnostics(plan).schedule
     baseline = baseline_schedule.final_closing_cents
 
-    original_large = model.SHIFT_NET_CENTS["L"]
+    # Test with current shift type "Spark"
+    original_spark = model.SHIFT_NET_CENTS["Spark"]
     delta = 500
-    monkeypatch.setitem(model.SHIFT_NET_CENTS, "L", original_large + delta)
+    monkeypatch.setitem(model.SHIFT_NET_CENTS, "Spark", original_spark + delta)
 
     adjusted_plan = load_plan("plan.json")
-    l_days = baseline_schedule.actions.count("L")
-    adjusted_plan.target_end_cents += l_days * delta
+    spark_days = baseline_schedule.actions.count("Spark")
+    adjusted_plan.target_end_cents += spark_days * delta
 
-    lowered_schedule = solve_with_diagnostics(adjusted_plan).schedule
-    l_days = baseline_schedule.actions.count("L")
-    assert lowered_schedule.actions.count("L") == l_days
-    assert lowered_schedule.final_closing_cents == baseline + l_days * delta
+    adjusted_schedule = solve_with_diagnostics(adjusted_plan).schedule
+    spark_days_new = adjusted_schedule.actions.count("Spark")
+    assert spark_days_new == spark_days
+    assert adjusted_schedule.final_closing_cents == baseline + spark_days * delta
 
 
 def test_locked_actions_respected():
     plan = load_plan("plan.json")
-    plan.actions[5] = "SS"
+    # Lock day 6 (index 5) to "Spark"
+    plan.actions[5] = "Spark"
     schedule = solve_with_diagnostics(plan).schedule
-    assert schedule.actions[5] == "SS"
+    assert schedule.actions[5] == "Spark"
