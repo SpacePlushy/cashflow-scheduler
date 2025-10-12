@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Schedule, Bill } from "@/lib/types";
@@ -23,14 +24,42 @@ export function ScheduleCalendar({ schedule, bills }: ScheduleCalendarProps) {
     return "text-green-500";
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.03
+      }
+    }
+  };
+
+  const cellVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 25
+      }
+    }
+  };
+
   return (
     <Card className="col-span-4">
       <CardHeader>
         <CardTitle>30-Day Schedule</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-5 md:grid-cols-7 lg:grid-cols-10 gap-2">
-          {schedule.ledger.map((row) => {
+        <motion.div
+          className="grid grid-cols-5 md:grid-cols-7 lg:grid-cols-10 gap-2"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {schedule.ledger.map((row, index) => {
             const dayBills = getBillsForDay(row.day);
             const isWorkDay = row.action === "Spark";
             const hasDeposit = parseFloat(row.deposits) > 0;
@@ -38,14 +67,17 @@ export function ScheduleCalendar({ schedule, bills }: ScheduleCalendarProps) {
             const tooltipBelow = row.day <= 10;
 
             return (
-              <div
+              <motion.div
                 key={row.day}
+                variants={cellVariants}
                 className={cn(
                   "group relative rounded-lg border p-2 transition-all hover:shadow-lg hover:scale-105 hover:z-[9999] cursor-pointer",
                   isWorkDay
                     ? "bg-blue-500/10 border-blue-500/50"
                     : "bg-muted/50 border-muted"
                 )}
+                whileHover={{ scale: 1.08, zIndex: 9999 }}
+                whileTap={{ scale: 0.98 }}
               >
                 {/* Day Number */}
                 <div className="text-xs font-bold mb-1 flex items-center justify-between">
@@ -131,10 +163,10 @@ export function ScheduleCalendar({ schedule, bills }: ScheduleCalendarProps) {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </CardContent>
     </Card>
   );

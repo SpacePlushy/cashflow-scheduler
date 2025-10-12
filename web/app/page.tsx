@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { FinancialSummary } from "@/components/financial-summary";
 import { ScheduleCalendar } from "@/components/schedule-calendar";
 import { LedgerTable } from "@/components/ledger-table";
@@ -18,6 +19,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Loader2, AlertCircle, Calendar as CalendarIcon, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { fadeIn, fadeInUp } from "@/lib/animations";
 
 export default function Home() {
   const [schedule, setSchedule] = useState<Schedule | null>(null);
@@ -63,34 +65,78 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-lg text-muted-foreground">Optimizing your schedule...</p>
-        </div>
-      </div>
+      <motion.div
+        className="min-h-screen flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
+        <motion.div
+          className="flex flex-col items-center gap-4"
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <motion.div
+            animate={{
+              rotate: 360,
+              scale: [1, 1.1, 1]
+            }}
+            transition={{
+              rotate: { duration: 1, repeat: Infinity, ease: "linear" },
+              scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+            }}
+          >
+            <Loader2 className="h-12 w-12 text-primary" />
+          </motion.div>
+          <motion.p
+            className="text-lg text-muted-foreground"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            Optimizing your schedule...
+          </motion.p>
+        </motion.div>
+      </motion.div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full border-destructive">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <AlertCircle className="h-6 w-6 text-destructive flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-2">Error Loading Schedule</h3>
-                <p className="text-sm text-muted-foreground mb-4">{error}</p>
-                <Badge variant="destructive">API Connection Failed</Badge>
-                <p className="text-xs text-muted-foreground mt-4">
-                  Make sure the API server is running at http://localhost:8000
-                </p>
+      <motion.div
+        className="min-h-screen flex items-center justify-center p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+        >
+          <Card className="max-w-md w-full border-destructive">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <motion.div
+                  animate={{ rotate: [0, -10, 10, -10, 0] }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                >
+                  <AlertCircle className="h-6 w-6 text-destructive flex-shrink-0 mt-0.5" />
+                </motion.div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg mb-2">Error Loading Schedule</h3>
+                  <p className="text-sm text-muted-foreground mb-4">{error}</p>
+                  <Badge variant="destructive">API Connection Failed</Badge>
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Make sure the API server is running at http://localhost:8000
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
     );
   }
 
@@ -105,7 +151,12 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+      <motion.header
+        className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50"
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <CalendarIcon className="h-8 w-8 text-primary" />
@@ -155,19 +206,36 @@ export default function Home() {
             <ModeToggle />
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 space-y-6">
         {/* Financial Summary Cards */}
-        <FinancialSummary schedule={schedule} />
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <FinancialSummary schedule={schedule} />
+        </motion.div>
 
         {/* Schedule Calendar */}
-        <ScheduleCalendar schedule={schedule} bills={defaultPlan.bills} />
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          <ScheduleCalendar schedule={schedule} bills={defaultPlan.bills} />
+        </motion.div>
 
         {/* Set EOD Form */}
-        <Collapsible open={isSetEodOpen} onOpenChange={setIsSetEodOpen}>
-          <Card>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          <Collapsible open={isSetEodOpen} onOpenChange={setIsSetEodOpen}>
+            <Card>
             <CardHeader className="pb-3">
               <CollapsibleTrigger asChild>
                 <Button
@@ -195,10 +263,16 @@ export default function Home() {
             </CollapsibleContent>
           </Card>
         </Collapsible>
+        </motion.div>
 
         {/* Ledger Table */}
-        <Collapsible open={isLedgerOpen} onOpenChange={setIsLedgerOpen}>
-          <Card>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+        >
+          <Collapsible open={isLedgerOpen} onOpenChange={setIsLedgerOpen}>
+            <Card>
             <CardHeader className="pb-3">
               <CollapsibleTrigger asChild>
                 <Button
@@ -221,10 +295,16 @@ export default function Home() {
             </CollapsibleContent>
           </Card>
         </Collapsible>
+        </motion.div>
 
         {/* Validation Details */}
-        <Collapsible open={isValidationOpen} onOpenChange={setIsValidationOpen}>
-          <Card>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+        >
+          <Collapsible open={isValidationOpen} onOpenChange={setIsValidationOpen}>
+            <Card>
             <CardHeader className="pb-3">
               <CollapsibleTrigger asChild>
                 <Button
@@ -278,16 +358,22 @@ export default function Home() {
             </CollapsibleContent>
           </Card>
         </Collapsible>
+        </motion.div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t mt-12">
+      <motion.footer
+        className="border-t mt-12"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.8 }}
+      >
         <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
           <p>
             Powered by OR-Tools CP-SAT and Dynamic Programming
           </p>
         </div>
-      </footer>
+      </motion.footer>
     </div>
   );
 }
