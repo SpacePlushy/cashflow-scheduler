@@ -1,4 +1,4 @@
-.PHONY: setup setup-dev lint type test format verify smoke smoke-vercel web-install web-dev web-build web-lint web-start
+.PHONY: setup setup-dev lint type test format verify smoke smoke-vercel web-install web-dev web-build web-lint web-start clean
 # Use python -m pip for portability across environments where `pip` may not be on PATH
 setup: ; python3 -m pip install -r requirements.txt
 setup-dev: ; python3 -m pip install -e .
@@ -15,3 +15,5 @@ web-dev: ; cd web && npm run dev
 web-build: ; cd web && npm run build
 web-start: ; cd web && npm run start
 web-lint: ; cd web && npm run lint
+
+clean: ; find . -type d -name __pycache__ -exec rm -rf {} + ; find . -type f -name '*.pyc' -delete ; rm -rf .pytest_cache .mypy_cache *.egg-info build dist
