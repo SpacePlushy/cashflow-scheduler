@@ -46,10 +46,9 @@ services:
 
   # Web Service - Next.js Frontend
   - name: web
-    # Next.js build configuration
-    build_command: npm ci && npm run build
-    run_command: npm start
-    source_dir: /web
+    # Use Dockerfile for Next.js app
+    dockerfile_path: web/Dockerfile
+    source_dir: /
     github:
       repo: SpacePlushy/cashflow-scheduler
       branch: main
@@ -61,6 +60,16 @@ services:
 
     # HTTP configuration
     http_port: 3000
+
+    # Health check
+    health_check:
+      http_path: /
+      port: 3000
+      initial_delay_seconds: 30
+      period_seconds: 30
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
 
     # Environment variables
     envs:
