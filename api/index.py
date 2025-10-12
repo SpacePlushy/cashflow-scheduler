@@ -45,8 +45,29 @@ async def solve(req: Request):
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
 
-    result = solve_with_diagnostics(plan)
-    schedule = result.schedule
+    # Extract solver preference from request body
+    solver_preference = body.get("solver", "cpsat")  # default to cpsat
+
+    if solver_preference == "dp":
+        # Use DP solver directly
+        schedule = dp_solve(plan)
+        from cashflow.core.ledger import build_ledger
+        if not schedule.ledger:
+            schedule.ledger = build_ledger(plan, schedule.actions)
+        # Create a result-like structure for DP
+        class DPResult:
+            def __init__(self, schedule):
+                self.schedule = schedule
+                self.solver = "dp"
+                self.statuses = []
+                self.solve_seconds = 0.0
+                self.fallback_reason = None
+        result = DPResult(schedule)
+    else:
+        # Use CP-SAT with DP fallback
+        result = solve_with_diagnostics(plan)
+        schedule = result.schedule
+
     report = validate(plan, schedule)
     return JSONResponse(_schedule_payload(schedule, report, result))
 
@@ -64,6 +85,9 @@ async def set_eod(req: Request):
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
 
+    # Extract solver preference from request body
+    solver_preference = body.get("solver", "cpsat")  # default to cpsat
+
     baseline = dp_solve(plan)
     base_ledger = build_ledger(plan, baseline.actions)
     current_eod = base_ledger[day - 1].closing_cents
@@ -74,8 +98,26 @@ async def set_eod(req: Request):
     plan.manual_adjustments = list(plan.manual_adjustments) + [
         Adjustment(day=day, amount_cents=delta, note="api set-eod"),
     ]
-    result = solve_with_diagnostics(plan)
-    schedule = result.schedule
+
+    if solver_preference == "dp":
+        # Use DP solver directly
+        schedule = dp_solve(plan)
+        if not schedule.ledger:
+            schedule.ledger = build_ledger(plan, schedule.actions)
+        # Create a result-like structure for DP
+        class DPResult:
+            def __init__(self, schedule):
+                self.schedule = schedule
+                self.solver = "dp"
+                self.statuses = []
+                self.solve_seconds = 0.0
+                self.fallback_reason = None
+        result = DPResult(schedule)
+    else:
+        # Use CP-SAT with DP fallback
+        result = solve_with_diagnostics(plan)
+        schedule = result.schedule
+
     report = validate(plan, schedule)
 
     return JSONResponse(_schedule_payload(schedule, report, result))
@@ -93,8 +135,20 @@ async def export(req: Request):
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
 
-    result = solve_with_diagnostics(plan)
-    schedule = result.schedule
+    # Extract solver preference from request body
+    solver_preference = body.get("solver", "cpsat")  # default to cpsat
+
+    if solver_preference == "dp":
+        # Use DP solver directly
+        schedule = dp_solve(plan)
+        if not schedule.ledger:
+            from cashflow.core.ledger import build_ledger
+            schedule.ledger = build_ledger(plan, schedule.actions)
+    else:
+        # Use CP-SAT with DP fallback
+        result = solve_with_diagnostics(plan)
+        schedule = result.schedule
+
     if fmt == "md":
         content = render_markdown(schedule)
     elif fmt == "csv":

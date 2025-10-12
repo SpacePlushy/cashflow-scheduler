@@ -2,13 +2,18 @@ import { Plan, Schedule } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export async function solveSchedule(plan?: Plan): Promise<Schedule> {
+export type SolverType = "dp" | "cpsat";
+
+export async function solveSchedule(plan?: Plan, solver: SolverType = "cpsat"): Promise<Schedule> {
+  const payload: any = plan ? { plan } : {};
+  payload.solver = solver;
+
   const response = await fetch(`${API_BASE_URL}/solve`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(plan ? { plan } : {}),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -22,7 +27,8 @@ export async function solveSchedule(plan?: Plan): Promise<Schedule> {
 export async function setEOD(
   day: number,
   eodAmount: number,
-  plan: Plan
+  plan: Plan,
+  solver: SolverType = "cpsat"
 ): Promise<Schedule> {
   const response = await fetch(`${API_BASE_URL}/set_eod`, {
     method: "POST",
@@ -33,6 +39,7 @@ export async function setEOD(
       day,
       eod_amount: eodAmount,
       plan,
+      solver,
     }),
   });
 
@@ -46,7 +53,8 @@ export async function setEOD(
 
 export async function exportSchedule(
   plan: Plan,
-  format: "md" | "csv" | "json" = "md"
+  format: "md" | "csv" | "json" = "md",
+  solver: SolverType = "cpsat"
 ): Promise<{ format: string; content: string }> {
   const response = await fetch(`${API_BASE_URL}/export`, {
     method: "POST",
@@ -56,6 +64,7 @@ export async function exportSchedule(
     body: JSON.stringify({
       plan,
       format,
+      solver,
     }),
   });
 

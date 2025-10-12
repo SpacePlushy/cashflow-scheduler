@@ -5,16 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Schedule, Plan } from "@/lib/types";
-import { setEOD } from "@/lib/api";
+import { setEOD, SolverType } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 
 interface SetEodFormProps {
   schedule: Schedule;
   plan: Plan;
   onScheduleUpdate: (newSchedule: Schedule) => void;
+  solver: SolverType;
 }
 
-export function SetEodForm({ schedule, plan, onScheduleUpdate }: SetEodFormProps) {
+export function SetEodForm({ schedule, plan, onScheduleUpdate, solver }: SetEodFormProps) {
   const [day, setDay] = useState<number>(15);
   const [targetBalance, setTargetBalance] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -39,7 +40,7 @@ export function SetEodForm({ schedule, plan, onScheduleUpdate }: SetEodFormProps
 
     setIsLoading(true);
     try {
-      const newSchedule = await setEOD(day, parseFloat(targetBalance), plan);
+      const newSchedule = await setEOD(day, parseFloat(targetBalance), plan, solver);
       onScheduleUpdate(newSchedule);
       setError(null);
     } catch (err) {
