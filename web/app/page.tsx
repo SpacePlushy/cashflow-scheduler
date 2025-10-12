@@ -17,12 +17,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Loader2, AlertCircle, Calendar as CalendarIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, AlertCircle, Calendar as CalendarIcon, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 
 export default function Home() {
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
   const [isSetEodOpen, setIsSetEodOpen] = useState(false);
   const [isLedgerOpen, setIsLedgerOpen] = useState(false);
   const [isValidationOpen, setIsValidationOpen] = useState(true);
@@ -44,6 +45,20 @@ export default function Home() {
 
     fetchSchedule();
   }, []);
+
+  const handleResolve = async () => {
+    try {
+      setIsResolving(true);
+      setError(null);
+      const result = await solveSchedule(defaultPlan);
+      setSchedule(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resolve schedule");
+      console.error("Error resolving schedule:", err);
+    } finally {
+      setIsResolving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -106,6 +121,18 @@ export default function Home() {
                 Solver: {schedule.solver.name} ({schedule.solver.seconds.toFixed(2)}s)
               </Badge>
             )}
+            <Button
+              onClick={handleResolve}
+              disabled={isResolving}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isResolving ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">
+                {isResolving ? 'Solving...' : 'Re-run Solver'}
+              </span>
+            </Button>
             <ModeToggle />
           </div>
         </div>
