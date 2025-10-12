@@ -46,9 +46,9 @@ services:
   # Web Service - Next.js Frontend
   - name: web
     # Next.js build configuration
-    build_command: cd web && npm ci && npm run build
-    run_command: cd web && npm start
-    source_dir: /
+    build_command: npm ci && npm run build
+    run_command: npm start
+    source_dir: /web
     github:
       repo: SpacePlushy/cashflow-scheduler
       branch: main
