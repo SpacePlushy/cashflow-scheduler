@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Schedule } from "@/lib/types";
@@ -17,9 +18,39 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
   // Checks are tuples: [name, ok, detail]
   const allChecksPassed = schedule.checks.every((check) => check[1]);
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 200,
+        damping: 20
+      }
+    }
+  };
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
+    <motion.div
+      className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.div variants={cardVariants}>
+        <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Workdays</CardTitle>
           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -31,8 +62,10 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
           </p>
         </CardContent>
       </Card>
+      </motion.div>
 
-      <Card>
+      <motion.div variants={cardVariants}>
+        <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Final Balance</CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -44,8 +77,10 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
           </p>
         </CardContent>
       </Card>
+      </motion.div>
 
-      <Card>
+      <motion.div variants={cardVariants}>
+        <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Schedule Quality</CardTitle>
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -57,8 +92,10 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
           </p>
         </CardContent>
       </Card>
+      </motion.div>
 
-      <Card>
+      <motion.div variants={cardVariants}>
+        <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Validation</CardTitle>
           {allChecksPassed ? (
@@ -78,6 +115,7 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
           </p>
         </CardContent>
       </Card>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
