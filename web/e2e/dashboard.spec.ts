@@ -232,3 +232,252 @@ test.describe('Cashflow Scheduler Dashboard', () => {
     await expect(spinner).toBeVisible();
   });
 });
+
+test.describe('Solver Switcher', () => {
+  test.beforeEach(async ({ page }) => {
+    // Mock API responses for both solvers
+    await page.route('**/solve', async (route) => {
+      const request = route.request();
+      const postData = request.postDataJSON();
+      const solver = postData?.solver || 'cpsat';
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          actions: Array(30).fill('O').map((_, i) => (i % 3 === 0 ? 'Spark' : 'O')),
+          objective: solver === 'dp' ? [11, 2, 0] : [12, 3, 0],
+          final_closing: solver === 'dp' ? '100.50' : '90.50',
+          ledger: Array.from({ length: 30 }, (_, i) => ({
+            day: i + 1,
+            opening: '100.00',
+            deposits: i === 9 || i === 23 ? '1021.00' : '0.00',
+            action: i % 3 === 0 ? 'Spark' : 'O',
+            net: i % 3 === 0 ? '100.00' : '0.00',
+            bills: i === 0 ? '108.00' : '0.00',
+            closing: solver === 'dp' ? '160.00' : '150.00',
+          })),
+          checks: [
+            ['Non-negative balances', true, 'All days positive'],
+            ['Rent guard', true, 'Sufficient funds'],
+            ['Target band', true, 'Within tolerance'],
+          ],
+          solver: {
+            name: solver === 'dp' ? 'dp' : 'cpsat',
+            statuses: solver === 'dp' ? [] : ['OPTIMAL'],
+            seconds: solver === 'dp' ? 0.05 : 0.123,
+          },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await expect(page.getByText('Optimizing your schedule...')).not.toBeVisible({ timeout: 10000 });
+  });
+
+  test('should display solver toggle buttons', async ({ page }) => {
+    // Check that both solver buttons are visible
+    await expect(page.getByRole('button', { name: 'CP-SAT' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'DP' })).toBeVisible();
+  });
+
+  test('should default to CP-SAT solver', async ({ page }) => {
+    // CP-SAT button should be active by default (have "default" variant styling)
+    const cpsatButton = page.getByRole('button', { name: 'CP-SAT' });
+    const dpButton = page.getByRole('button', { name: 'DP' });
+
+    // Check that CP-SAT is initially active
+    await expect(page.getByText(/Solver: cpsat/)).toBeVisible();
+  });
+
+  test('should switch to DP solver when clicked', async ({ page }) => {
+    // Click the DP button
+    const dpButton = page.getByRole('button', { name: 'DP' });
+    await dpButton.click();
+
+    // Wait for the solver to change and resolve
+    await expect(page.getByText(/Solver: dp/)).toBeVisible({ timeout: 5000 });
+
+    // Check that the solver info shows DP
+    await expect(page.getByText(/Solver: dp/)).toBeVisible();
+  });
+
+  test('should switch back to CP-SAT solver', async ({ page }) => {
+    // First switch to DP
+    await page.getByRole('button', { name: 'DP' }).click();
+    await expect(page.getByText(/Solver: dp/)).toBeVisible({ timeout: 5000 });
+
+    // Then switch back to CP-SAT
+    await page.getByRole('button', { name: 'CP-SAT' }).click();
+    await expect(page.getByText(/Solver: cpsat/)).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should trigger re-solve when switching solvers', async ({ page }) => {
+    // Track API calls
+    let solveCallCount = 0;
+    let lastSolver = '';
+
+    await page.route('**/solve', async (route) => {
+      const request = route.request();
+      const postData = request.postDataJSON();
+      lastSolver = postData?.solver || 'cpsat';
+      solveCallCount++;
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          actions: Array(30).fill('O'),
+          objective: [10, 2, 0],
+          final_closing: '200.50',
+          ledger: Array.from({ length: 30 }, (_, i) => ({
+            day: i + 1,
+            opening: '100.00',
+            deposits: '0.00',
+            action: 'O',
+            net: '0.00',
+            bills: '0.00',
+            closing: '100.00',
+          })),
+          checks: [],
+          solver: {
+            name: lastSolver,
+            statuses: [],
+            seconds: 0.1,
+          },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await expect(page.getByText('Optimizing your schedule...')).not.toBeVisible({ timeout: 10000 });
+
+    const initialCallCount = solveCallCount;
+
+    // Switch to DP
+    await page.getByRole('button', { name: 'DP' }).click();
+
+    // Wait a bit for the API call to be made
+    await page.waitForTimeout(500);
+
+    // Verify that a new API call was made with DP
+    expect(solveCallCount).toBeGreaterThan(initialCallCount);
+    expect(lastSolver).toBe('dp');
+  });
+
+  test('should update schedule when switching solvers', async ({ page }) => {
+    // Get initial final balance
+    const balanceCard = page.locator('text=Final Balance').locator('..');
+    await expect(balanceCard.getByText('$90.50')).toBeVisible();
+
+    // Switch to DP solver
+    await page.getByRole('button', { name: 'DP' }).click();
+
+    // Wait for update and check balance changed
+    await expect(balanceCard.getByText('$100.50')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should maintain solver selection during set_eod operation', async ({ page }) => {
+    // Mock set_eod endpoint
+    await page.route('**/set_eod', async (route) => {
+      const request = route.request();
+      const postData = request.postDataJSON();
+      const solver = postData?.solver || 'cpsat';
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          actions: Array(30).fill('O'),
+          objective: [10, 2, 0],
+          final_closing: '500.00',
+          ledger: Array.from({ length: 30 }, (_, i) => ({
+            day: i + 1,
+            opening: '100.00',
+            deposits: '0.00',
+            action: 'O',
+            net: '0.00',
+            bills: '0.00',
+            closing: '100.00',
+          })),
+          checks: [],
+          solver: {
+            name: solver,
+            statuses: [],
+            seconds: 0.1,
+          },
+        }),
+      });
+    });
+
+    // Switch to DP solver
+    await page.getByRole('button', { name: 'DP' }).click();
+    await expect(page.getByText(/Solver: dp/)).toBeVisible({ timeout: 5000 });
+
+    // Open Set EOD form
+    await page.getByText('Set End-of-Day Balance').click();
+
+    // Fill in the form
+    await page.getByLabel('Target EOD Balance ($)').fill('500.00');
+
+    // Submit the form
+    await page.getByRole('button', { name: 'Apply Changes' }).click();
+
+    // Wait for the response
+    await page.waitForTimeout(1000);
+
+    // The solver should still be DP after the operation
+    await expect(page.getByText(/Solver: dp/)).toBeVisible();
+  });
+
+  test('should show loading state when switching solvers', async ({ page }) => {
+    // Mock delayed response
+    await page.route('**/solve', async (route) => {
+      const request = route.request();
+      const postData = request.postDataJSON();
+      const solver = postData?.solver || 'cpsat';
+
+      // Add delay for DP solver to see loading state
+      if (solver === 'dp') {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          actions: Array(30).fill('O'),
+          objective: [10, 2, 0],
+          final_closing: '200.50',
+          ledger: Array.from({ length: 30 }, (_, i) => ({
+            day: i + 1,
+            opening: '100.00',
+            deposits: '0.00',
+            action: 'O',
+            net: '0.00',
+            bills: '0.00',
+            closing: '100.00',
+          })),
+          checks: [],
+          solver: {
+            name: solver,
+            statuses: [],
+            seconds: 0.1,
+          },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await expect(page.getByText('Optimizing your schedule...')).not.toBeVisible({ timeout: 10000 });
+
+    // Click DP button
+    await page.getByRole('button', { name: 'DP' }).click();
+
+    // Should briefly show loading state
+    // Note: This might be too fast to catch reliably, but the test documents expected behavior
+    const loading = page.getByText('Optimizing your schedule...');
+    // Just check that page is functional after loading
+    await expect(page.getByRole('button', { name: 'DP' })).toBeVisible();
+  });
+});

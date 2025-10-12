@@ -7,7 +7,7 @@ import { LedgerTable } from "@/components/ledger-table";
 import { ModeToggle } from "@/components/mode-toggle";
 import { SetEodForm } from "@/components/set-eod-form";
 import { Schedule } from "@/lib/types";
-import { solveSchedule } from "@/lib/api";
+import { solveSchedule, SolverType } from "@/lib/api";
 import { defaultPlan } from "@/lib/defaultPlan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,13 +27,14 @@ export default function Home() {
   const [isSetEodOpen, setIsSetEodOpen] = useState(false);
   const [isLedgerOpen, setIsLedgerOpen] = useState(false);
   const [isValidationOpen, setIsValidationOpen] = useState(true);
+  const [solver, setSolver] = useState<SolverType>("cpsat");
 
   useEffect(() => {
     async function fetchSchedule() {
       try {
         setLoading(true);
         setError(null);
-        const result = await solveSchedule(defaultPlan);
+        const result = await solveSchedule(defaultPlan, solver);
         setSchedule(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load schedule");
@@ -44,13 +45,13 @@ export default function Home() {
     }
 
     fetchSchedule();
-  }, []);
+  }, [solver]);
 
   const handleResolve = async () => {
     try {
       setIsResolving(true);
       setError(null);
-      const result = await solveSchedule(defaultPlan);
+      const result = await solveSchedule(defaultPlan, solver);
       setSchedule(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to resolve schedule");
@@ -121,6 +122,24 @@ export default function Home() {
                 Solver: {schedule.solver.name} ({schedule.solver.seconds.toFixed(2)}s)
               </Badge>
             )}
+            <div className="flex items-center gap-2 border rounded-md p-1">
+              <Button
+                onClick={() => setSolver("cpsat")}
+                variant={solver === "cpsat" ? "default" : "ghost"}
+                size="sm"
+                className="h-8"
+              >
+                CP-SAT
+              </Button>
+              <Button
+                onClick={() => setSolver("dp")}
+                variant={solver === "dp" ? "default" : "ghost"}
+                size="sm"
+                className="h-8"
+              >
+                DP
+              </Button>
+            </div>
             <Button
               onClick={handleResolve}
               disabled={isResolving}
@@ -170,6 +189,7 @@ export default function Home() {
                   schedule={schedule}
                   plan={defaultPlan}
                   onScheduleUpdate={setSchedule}
+                  solver={solver}
                 />
               </CardContent>
             </CollapsibleContent>
