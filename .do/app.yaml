@@ -47,8 +47,8 @@ services:
   # Web Service - Next.js Frontend
   - name: web
     # Use Dockerfile for Next.js app
-    dockerfile_path: web/Dockerfile
-    source_dir: /
+    dockerfile_path: Dockerfile
+    source_dir: /web
     github:
       repo: SpacePlushy/cashflow-scheduler
       branch: main
