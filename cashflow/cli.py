@@ -19,7 +19,9 @@ from .io.render import render_markdown, build_rich_table
 from .io.calendar import render_calendar_png
 from .core.model import Adjustment, to_cents
 
-app = typer.Typer(help="30-Day Cash-Flow Scheduler")
+app = typer.Typer(
+    help="Optimize work schedules to meet 30-day cash flow constraints using constraint programming"
+)
 
 
 def _default_plan_path() -> Path:
