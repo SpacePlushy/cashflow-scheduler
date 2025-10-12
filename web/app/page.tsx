@@ -63,10 +63,10 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center animate-fade-in">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-lg text-muted-foreground">Optimizing your schedule...</p>
+          <p className="text-lg text-muted-foreground animate-pulse-subtle">Optimizing your schedule...</p>
         </div>
       </div>
     );
@@ -74,8 +74,8 @@ export default function Home() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full border-destructive">
+      <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
+        <Card className="max-w-md w-full border-destructive animate-scale-in">
           <CardContent className="pt-6">
             <div className="flex items-start gap-4">
               <AlertCircle className="h-6 w-6 text-destructive flex-shrink-0 mt-0.5" />
@@ -105,10 +105,10 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 animate-slide-up">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <CalendarIcon className="h-8 w-8 text-primary" />
+            <CalendarIcon className="h-8 w-8 text-primary animate-pulse-subtle" />
             <div>
               <h1 className="text-2xl font-bold">Cashflow Scheduler</h1>
               <p className="text-sm text-muted-foreground">
@@ -160,13 +160,18 @@ export default function Home() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 space-y-6">
         {/* Financial Summary Cards */}
-        <FinancialSummary schedule={schedule} />
+        <div className="animate-slide-up stagger-1">
+          <FinancialSummary schedule={schedule} />
+        </div>
 
         {/* Schedule Calendar */}
-        <ScheduleCalendar schedule={schedule} bills={defaultPlan.bills} />
+        <div className="animate-slide-up stagger-2">
+          <ScheduleCalendar schedule={schedule} bills={defaultPlan.bills} />
+        </div>
 
         {/* Set EOD Form */}
-        <Collapsible open={isSetEodOpen} onOpenChange={setIsSetEodOpen}>
+        <div className="animate-slide-up stagger-3">
+          <Collapsible open={isSetEodOpen} onOpenChange={setIsSetEodOpen}>
           <Card>
             <CardHeader className="pb-3">
               <CollapsibleTrigger asChild>
@@ -195,9 +200,11 @@ export default function Home() {
             </CollapsibleContent>
           </Card>
         </Collapsible>
+        </div>
 
         {/* Ledger Table */}
-        <Collapsible open={isLedgerOpen} onOpenChange={setIsLedgerOpen}>
+        <div className="animate-slide-up stagger-4">
+          <Collapsible open={isLedgerOpen} onOpenChange={setIsLedgerOpen}>
           <Card>
             <CardHeader className="pb-3">
               <CollapsibleTrigger asChild>
@@ -221,9 +228,11 @@ export default function Home() {
             </CollapsibleContent>
           </Card>
         </Collapsible>
+        </div>
 
         {/* Validation Details */}
-        <Collapsible open={isValidationOpen} onOpenChange={setIsValidationOpen}>
+        <div className="animate-slide-up stagger-4">
+          <Collapsible open={isValidationOpen} onOpenChange={setIsValidationOpen}>
           <Card>
             <CardHeader className="pb-3">
               <CollapsibleTrigger asChild>
@@ -278,10 +287,11 @@ export default function Home() {
             </CollapsibleContent>
           </Card>
         </Collapsible>
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t mt-12">
+      <footer className="border-t mt-12 animate-fade-in">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
           <p>
             Powered by OR-Tools CP-SAT and Dynamic Programming

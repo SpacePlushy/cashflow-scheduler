@@ -19,10 +19,10 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
+      <Card className="transition-all hover:shadow-lg hover:scale-105">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Workdays</CardTitle>
-          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <Calendar className="h-4 w-4 text-muted-foreground animate-pulse-subtle" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{workdays}</div>
@@ -32,10 +32,10 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="transition-all hover:shadow-lg hover:scale-105">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Final Balance</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <DollarSign className="h-4 w-4 text-muted-foreground animate-pulse-subtle" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">${schedule.final_closing}</div>
@@ -45,10 +45,10 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="transition-all hover:shadow-lg hover:scale-105">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Schedule Quality</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <TrendingUp className="h-4 w-4 text-muted-foreground animate-pulse-subtle" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{backToBackPairs}</div>
@@ -58,13 +58,13 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="transition-all hover:shadow-lg hover:scale-105">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Validation</CardTitle>
           {allChecksPassed ? (
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <CheckCircle2 className="h-4 w-4 text-green-500 animate-pulse-subtle" />
           ) : (
-            <XCircle className="h-4 w-4 text-red-500" />
+            <XCircle className="h-4 w-4 text-red-500 animate-pulse-subtle" />
           )}
         </CardHeader>
         <CardContent>

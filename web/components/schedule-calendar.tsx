@@ -30,22 +30,25 @@ export function ScheduleCalendar({ schedule, bills }: ScheduleCalendarProps) {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-5 md:grid-cols-7 lg:grid-cols-10 gap-2">
-          {schedule.ledger.map((row) => {
+          {schedule.ledger.map((row, index) => {
             const dayBills = getBillsForDay(row.day);
             const isWorkDay = row.action === "Spark";
             const hasDeposit = parseFloat(row.deposits) > 0;
             // Show tooltip below for days 1-10, above for days 11-30
             const tooltipBelow = row.day <= 10;
+            // Calculate stagger delay for smooth animation
+            const staggerDelay = `${index * 0.03}s`;
 
             return (
               <div
                 key={row.day}
                 className={cn(
-                  "group relative rounded-lg border p-2 transition-all hover:shadow-lg hover:scale-105 hover:z-[9999] cursor-pointer",
+                  "group relative rounded-lg border p-2 transition-all hover:shadow-lg hover:scale-105 hover:z-[9999] cursor-pointer animate-scale-in",
                   isWorkDay
                     ? "bg-blue-500/10 border-blue-500/50"
                     : "bg-muted/50 border-muted"
                 )}
+                style={{ animationDelay: staggerDelay }}
               >
                 {/* Day Number */}
                 <div className="text-xs font-bold mb-1 flex items-center justify-between">
