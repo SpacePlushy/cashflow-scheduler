@@ -1,5 +1,3 @@
-import pytest
-
 from cashflow.io.store import load_plan
 from cashflow.engines.dp import solve
 from cashflow.core.ledger import build_ledger
