@@ -372,6 +372,9 @@ export default function Home() {
           <p>
             Powered by OR-Tools CP-SAT and Dynamic Programming
           </p>
+          <p className="mt-2">
+            made with ❤️ by Frankie
+          </p>
         </div>
       </motion.footer>
     </div>
