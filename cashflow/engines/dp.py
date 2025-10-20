@@ -20,6 +20,7 @@ Action = str  # 'O' or 'Spark'
 @dataclass
 class _StateVal:
     # costs that are additive across days
+    b2b: int
     back: Optional[Tuple]  # (prev_state_key, action)
 
 
@@ -50,16 +51,16 @@ def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
     pre30 = pre_rent_base_on_day30(plan, dep, bills)
 
     # DP layers: dict[state_key] = _StateVal
-    # State key: (workUsed:int, net:int)
+    # State key: (prevWorked:int, workUsed:int, net:int)
     layers: List[Dict[Tuple, _StateVal]] = []
-    s0: Dict[Tuple, _StateVal] = {(0, 0): _StateVal(back=None)}
+    s0: Dict[Tuple, _StateVal] = {(0, 0, 0): _StateVal(b2b=0, back=None)}
     layers.append(s0)
 
     for day in range(1, 31):
         prev_layer = layers[-1]
         cur: Dict[Tuple, _StateVal] = {}
 
-        for (workUsed, net), val in prev_layer.items():
+        for (prevW, workUsed, net), val in prev_layer.items():
             locked = plan.actions[day - 1] if day - 1 < len(plan.actions) else None
             for a in _allowed_actions(day, locked, forbid_large_after_day1):
                 will_work = 1 if a != "O" else 0
@@ -83,20 +84,28 @@ def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
                     if pre30 + net_new < plan.rent_guard_cents:
                         continue
 
-                state_key = (work_used_new, net_new)
+                # Update costs
+                b2b_new = val.b2b + (1 if (prevW == 1 and will_work == 1) else 0)
+
+                state_key = (1 if will_work else 0, work_used_new, net_new)
                 new_val = _StateVal(
-                    back=((workUsed, net), a),
+                    b2b=b2b_new,
+                    back=((prevW, workUsed, net), a),
                 )
 
-                # Keep the state (only one per key now since no b2b to compare)
-                if state_key not in cur:
+                # Keep lexicographically best by (work_used, b2b)
+                existing = cur.get(state_key)
+                if existing is None or (work_used_new, b2b_new) < (
+                    work_used_new,
+                    existing.b2b,
+                ):
                     cur[state_key] = new_val
 
         layers.append(cur)
 
     # Select best final state within band
-    best_tuple: Optional[Tuple[Tuple[int, int], Tuple, _StateVal]] = None
-    for (workUsed, net), val in layers[-1].items():
+    best_tuple: Optional[Tuple[Tuple[int, int, int], Tuple, _StateVal]] = None
+    for (prevW, workUsed, net), val in layers[-1].items():
         final_closing = base[30] + net
         if not (
             plan.target_end_cents - plan.band_cents
@@ -105,9 +114,9 @@ def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
         ):
             continue
         abs_delta = abs(final_closing - plan.target_end_cents)
-        obj = (workUsed, abs_delta)
+        obj = (workUsed, val.b2b, abs_delta)
         if best_tuple is None or obj < best_tuple[0]:
-            best_tuple = (obj, (workUsed, net), val)
+            best_tuple = (obj, (prevW, workUsed, net), val)
 
     if best_tuple is None:
         raise RuntimeError("No feasible schedule found under constraints and band")

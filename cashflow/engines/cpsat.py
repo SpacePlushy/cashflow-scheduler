@@ -68,13 +68,13 @@ class CPSATSolution:
     """Container for a CP-SAT schedule and its objective components.
 
     - actions: the chosen action symbol per day (length 30)
-    - objective: 2-tuple in lexicographic order (workdays, abs_diff)
+    - objective: 3-tuple in lexicographic order (workdays, b2b, abs_diff)
     - final_closing_cents: closing balance on Day-30
     - statuses: per-stage CP-SAT status names during lex solve
     """
 
     actions: List[str]
-    objective: Tuple[int, int]
+    objective: Tuple[int, int, int]
     final_closing_cents: int
     statuses: List[str] = field(default_factory=list)
     solve_seconds: float = 0.0
@@ -111,8 +111,8 @@ class VerificationReport:
     """
 
     ok: bool
-    dp_obj: Tuple[int, int]
-    cp_obj: Tuple[int, int]
+    dp_obj: Tuple[int, int, int]
+    cp_obj: Tuple[int, int, int]
     dp_actions: List[str]
     cp_actions: List[str]
     detail: str = ""
@@ -153,6 +153,8 @@ def _build_model(plan: Plan):
     ]
     off = [model.NewBoolVar(f"off_{t}") for t in range(30)]
     w = [model.NewBoolVar(f"w_{t}") for t in range(30)]
+    # Adjacent-pair indicators for (work,work).
+    b2b = [model.NewBoolVar(f"b2b_{t}") for t in range(29)]
     # Cumulative sum of action deltas (in cents) up to day t with tight bounds.
     max_delta = max(SHIFT_NET_CENTS.values()) if SHIFT_NET_CENTS else 0
     min_delta = min(SHIFT_NET_CENTS.values()) if SHIFT_NET_CENTS else 0
@@ -194,6 +196,14 @@ def _build_model(plan: Plan):
         # w is the boolean negation of off (work if not off).
         model.Add(w[t] + off[t] == 1)
 
+    # b2b linearization
+    for t in range(29):
+        # b2b[t] = AND(w[t], w[t+1]) using standard linearization:
+        # b2b <= w_t, b2b <= w_t+1, b2b >= w_t + w_t+1 - 1
+        model.Add(b2b[t] <= w[t])
+        model.Add(b2b[t] <= w[t + 1])
+        model.Add(b2b[t] >= w[t] + w[t + 1] - 1)
+
     # Prefix net recursion
     # Map actions to per-day net cents deltas.
     net_vec = [SHIFT_NET_CENTS[a] for a in ACTIONS]
@@ -228,9 +238,11 @@ def _build_model(plan: Plan):
     model.AddAbsEquality(abs_diff, final_close - plan.target_end_cents)
 
     # Objective components
-    # We optimize lexicographically over these two parts (in order):
-    # 1) Minimize total workdays; 2) minimize |final diff from target|.
+    # We optimize lexicographically over these three parts (in order):
+    # 1) Minimize total workdays; 2) minimize back-to-back work pairs;
+    # 3) minimize |final diff from target|.
     workdays = sum(w)
+    b2b_sum = sum(b2b)
 
     if cp_model is not None:
         for t in range(30):
@@ -240,7 +252,7 @@ def _build_model(plan: Plan):
                 cp_model.SELECT_MAX_VALUE,
             )
 
-    return model, x, (workdays, abs_diff), final_close
+    return model, x, (workdays, b2b_sum, abs_diff), final_close
 
 
 def enumerate_ties(plan: Plan, limit: int = 5) -> List[CPSATSolution]:
@@ -415,8 +427,8 @@ def _solve_sequential_lex(
     options: CPSATSolveOptions,
     plan: Plan,
 ):
-    """Solve a 2-part lexicographic objective sequentially."""
-    workdays, abs_diff = obj_parts
+    """Solve a 3-part lexicographic objective sequentially."""
+    workdays, b2b_sum, abs_diff = obj_parts
 
     statuses: List[str] = []
     total_wall = 0.0
@@ -446,13 +458,27 @@ def _solve_sequential_lex(
     last_wall = current_wall
     model.Add(workdays == best_work)
 
-    # 2) Minimize abs_diff
+    # 2) Minimize b2b
+    model.Minimize(b2b_sum)
+    r = solver.Solve(model)
+    status = _status_name(r)
+    statuses.append(status)
+    if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        explanation = _explain_infeasibility(plan, 2, "minimize back-to-back work pairs")
+        raise RuntimeError(f"Status: {status}\n\n{explanation}")
+    best_b2b = solver.Value(b2b_sum)
+    current_wall = solver.WallTime()
+    total_wall += current_wall - last_wall
+    last_wall = current_wall
+    model.Add(b2b_sum == best_b2b)
+
+    # 3) Minimize abs_diff
     model.Minimize(abs_diff)
     r = solver.Solve(model)
     status = _status_name(r)
     statuses.append(status)
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        explanation = _explain_infeasibility(plan, 2, "minimize final balance difference")
+        explanation = _explain_infeasibility(plan, 3, "minimize final balance difference")
         raise RuntimeError(f"Status: {status}\n\n{explanation}")
     best_abs = solver.Value(abs_diff)
     current_wall = solver.WallTime()
@@ -460,7 +486,7 @@ def _solve_sequential_lex(
     last_wall = current_wall
     model.Add(abs_diff == best_abs)
 
-    return best_work, best_abs, statuses, total_wall
+    return best_work, best_b2b, best_abs, statuses, total_wall
 
 
 def solve_lex(plan: Plan, options: Optional[CPSATSolveOptions] = None) -> CPSATSolution:
@@ -471,7 +497,7 @@ def solve_lex(plan: Plan, options: Optional[CPSATSolveOptions] = None) -> CPSATS
     opts = options or CPSATSolveOptions()
     model, x, obj_parts, final_close = _build_model(plan)
     solver = cp_model.CpSolver()
-    w, absd, statuses, wall = _solve_sequential_lex(
+    w, b2b, absd, statuses, wall = _solve_sequential_lex(
         model, obj_parts, solver, opts, plan
     )
 
@@ -491,7 +517,7 @@ def solve_lex(plan: Plan, options: Optional[CPSATSolveOptions] = None) -> CPSATS
     final_cents = solver.Value(final_close)
     sol = CPSATSolution(
         actions=actions,
-        objective=(w, absd),
+        objective=(w, b2b, absd),
         final_closing_cents=final_cents,
         statuses=statuses,
         solve_seconds=wall,
