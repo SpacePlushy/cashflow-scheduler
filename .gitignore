@@ -30,3 +30,14 @@ htmlcov/
 .vercel
 playwright-report/
 test-results/
+
+# Temporary files and directories
+.tmp/
+.test_extract/
+
+# Build artifacts
+*.zip
+*-backup/
+
+# Cloned dependencies
+skills/

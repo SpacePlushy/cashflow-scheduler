@@ -1,0 +1,58 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import List, Tuple
+
+from .model import (
+    Plan,
+    Schedule,
+    SHIFT_NET_CENTS,
+    build_prefix_arrays,
+    pre_rent_base_on_day30,
+)
+
+
+@dataclass
+class ValidationReport:
+    ok: bool
+    checks: List[Tuple[str, bool, str]]  # (name, pass, detail)
+
+
+def validate(plan: Plan, schedule: Schedule) -> ValidationReport:
+    dep, bills, base = build_prefix_arrays(plan)
+    checks: List[Tuple[str, bool, str]] = []
+
+    # Day 1 must be a Spark workday
+    day1_ok = schedule.actions[0] == "Spark"
+    checks.append(("Day 1 Spark", day1_ok, schedule.actions[0]))
+
+    # Non-negativity & bills paid by construction
+    nonneg_ok = True
+    for t, ledger_row in enumerate(schedule.ledger, start=1):
+        if ledger_row.closing_cents < 0:
+            nonneg_ok = False
+            break
+    checks.append(("Non-negative balances", nonneg_ok, "closing>=0 for all t"))
+
+    # Final day within band
+    final = schedule.final_closing_cents
+    lo = plan.target_end_cents - plan.band_cents
+    hi = plan.target_end_cents + plan.band_cents
+    band_ok = lo <= final <= hi
+    checks.append(("Final within band", band_ok, f"{final} in [{lo},{hi}]"))
+
+    # Day-30 pre-rent guard
+    pre30 = pre_rent_base_on_day30(plan, dep, bills)
+    net_total = sum(SHIFT_NET_CENTS[a] for a in schedule.actions)
+    pre_rent_balance = pre30 + net_total
+    rent_ok = pre_rent_balance >= plan.rent_guard_cents
+    checks.append(
+        (
+            "Day-30 pre-rent guard",
+            rent_ok,
+            f"{pre_rent_balance}>= {plan.rent_guard_cents}",
+        )
+    )
+
+    ok = all(p for _, p, _ in checks)
+    return ValidationReport(ok=ok, checks=checks)
