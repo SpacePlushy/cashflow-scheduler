@@ -68,13 +68,13 @@ class CPSATSolution:
     """Container for a CP-SAT schedule and its objective components.
 
     - actions: the chosen action symbol per day (length 30)
-    - objective: 3-tuple in lexicographic order
+    - objective: 2-tuple in lexicographic order (workdays, abs_diff)
     - final_closing_cents: closing balance on Day-30
     - statuses: per-stage CP-SAT status names during lex solve
     """
 
     actions: List[str]
-    objective: Tuple[int, int, int]
+    objective: Tuple[int, int]
     final_closing_cents: int
     statuses: List[str] = field(default_factory=list)
     solve_seconds: float = 0.0
@@ -111,8 +111,8 @@ class VerificationReport:
     """
 
     ok: bool
-    dp_obj: Tuple[int, int, int]
-    cp_obj: Tuple[int, int, int]
+    dp_obj: Tuple[int, int]
+    cp_obj: Tuple[int, int]
     dp_actions: List[str]
     cp_actions: List[str]
     detail: str = ""
@@ -153,9 +153,6 @@ def _build_model(plan: Plan):
     ]
     off = [model.NewBoolVar(f"off_{t}") for t in range(30)]
     w = [model.NewBoolVar(f"w_{t}") for t in range(30)]
-    # Adjacent-pair indicators for (work,work) and (off,off).
-    b2b = [model.NewBoolVar(f"b2b_{t}") for t in range(29)]
-    oo = [model.NewBoolVar(f"oo_{t}") for t in range(29)]
     # Cumulative sum of action deltas (in cents) up to day t with tight bounds.
     max_delta = max(SHIFT_NET_CENTS.values()) if SHIFT_NET_CENTS else 0
     min_delta = min(SHIFT_NET_CENTS.values()) if SHIFT_NET_CENTS else 0
@@ -197,21 +194,6 @@ def _build_model(plan: Plan):
         # w is the boolean negation of off (work if not off).
         model.Add(w[t] + off[t] == 1)
 
-    # b2b linearization
-    for t in range(29):
-        # b2b[t] = AND(w[t], w[t+1]) using standard linearization:
-        # b2b <= w_t, b2b <= w_t+1, b2b >= w_t + w_t+1 - 1
-        model.Add(b2b[t] <= w[t])
-        model.Add(b2b[t] <= w[t + 1])
-        model.Add(b2b[t] >= w[t] + w[t + 1] - 1)
-
-    # oo (off-off) linearization
-    for t in range(29):
-        # oo[t] = AND(off[t], off[t+1])
-        model.Add(oo[t] <= off[t])
-        model.Add(oo[t] <= off[t + 1])
-        model.Add(oo[t] >= off[t] + off[t + 1] - 1)
-
     # Prefix net recursion
     # Map actions to per-day net cents deltas.
     net_vec = [SHIFT_NET_CENTS[a] for a in ACTIONS]
@@ -245,18 +227,10 @@ def _build_model(plan: Plan):
     # abs_diff = |final_close - target|
     model.AddAbsEquality(abs_diff, final_close - plan.target_end_cents)
 
-    # Off-Off window rule: For each 7-day window s..s+6, sum oo[i] >= 1
-    for s in range(0, 24):
-        # Each 7-day window contains 6 adjacent pairs; require at least one
-        # off-off adjacent pair within the window.
-        model.Add(sum(oo[i] for i in range(s, s + 6)) >= 1)
-
     # Objective components
-    # We optimize lexicographically over these three parts (in order):
-    # 1) Minimize total workdays; 2) minimize back-to-back work pairs;
-    # 3) minimize |final diff from target|.
+    # We optimize lexicographically over these two parts (in order):
+    # 1) Minimize total workdays; 2) minimize |final diff from target|.
     workdays = sum(w)
-    b2b_sum = sum(b2b)
 
     if cp_model is not None:
         for t in range(30):
@@ -266,7 +240,7 @@ def _build_model(plan: Plan):
                 cp_model.SELECT_MAX_VALUE,
             )
 
-    return model, x, (workdays, b2b_sum, abs_diff), final_close
+    return model, x, (workdays, abs_diff), final_close
 
 
 def enumerate_ties(plan: Plan, limit: int = 5) -> List[CPSATSolution]:
@@ -364,14 +338,85 @@ def _status_name(code: object) -> str:
     return str(code)
 
 
+def _explain_infeasibility(plan: Plan, stage: int, objective_name: str) -> str:
+    """Provide diagnostic information when CP-SAT reports infeasibility."""
+    messages = [
+        f"CP-SAT found no feasible solution during stage {stage} ({objective_name}).",
+        "",
+        "Possible reasons:",
+    ]
+
+    # Check for locked actions that might be problematic
+    locked_count = sum(1 for a in plan.actions if a is not None)
+    if locked_count > 0:
+        messages.append(
+            f"• {locked_count} days have locked actions - these constraints may be too restrictive"
+        )
+
+    # Check for large manual adjustments
+    if plan.manual_adjustments:
+        large_adjustments = [
+            adj
+            for adj in plan.manual_adjustments
+            if abs(adj.amount_cents) > 50000  # $500+
+        ]
+        if large_adjustments:
+            messages.append(
+                f"• Large manual adjustments detected on day(s): "
+                + ", ".join(str(adj.day) for adj in large_adjustments)
+            )
+            messages.append(
+                "  These may make it impossible to meet rent guard or final balance requirements"
+            )
+
+    # Check if total bills exceed total income potential
+    total_bills = sum(b.amount_cents for b in plan.bills)
+    total_deposits = sum(d.amount_cents for d in plan.deposits)
+    max_work_income = 30 * 10000  # 30 days * $100/day
+    total_available = plan.start_balance_cents + total_deposits + max_work_income
+
+    if total_bills > total_available:
+        messages.append(
+            f"• Total bills (${total_bills / 100:.2f}) exceed maximum possible income "
+            f"(${total_available / 100:.2f})"
+        )
+
+    # Check rent guard requirement
+    if plan.rent_guard_cents > 0:
+        messages.append(
+            f"• Rent guard requirement: ${plan.rent_guard_cents / 100:.2f} must be available before paying rent"
+        )
+
+    # Check final balance band
+    target_range = (
+        plan.target_end_cents - plan.band_cents,
+        plan.target_end_cents + plan.band_cents,
+    )
+    messages.append(
+        f"• Final balance must be in range ${target_range[0] / 100:.2f} to ${target_range[1] / 100:.2f}"
+    )
+
+    messages.append("")
+    messages.append("Suggestions:")
+    messages.append(
+        "• Try reducing manual adjustments or removing locked actions"
+    )
+    messages.append("• Check if bills can be rescheduled to different days")
+    messages.append("• Increase the target band tolerance if possible")
+    messages.append("• Verify rent guard threshold is not too high")
+
+    return "\n".join(messages)
+
+
 def _solve_sequential_lex(
     model,
     obj_parts,
     solver: "cp_model.CpSolver",
     options: CPSATSolveOptions,
+    plan: Plan,
 ):
-    """Solve a 3-part lexicographic objective sequentially."""
-    workdays, b2b_sum, abs_diff = obj_parts
+    """Solve a 2-part lexicographic objective sequentially."""
+    workdays, abs_diff = obj_parts
 
     statuses: List[str] = []
     total_wall = 0.0
@@ -390,40 +435,32 @@ def _solve_sequential_lex(
     # 1) Minimize workdays
     model.Minimize(workdays)
     r = solver.Solve(model)
-    statuses.append(_status_name(r))
+    status = _status_name(r)
+    statuses.append(status)
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        raise RuntimeError("CP-SAT failed to find a solution for objective 1")
+        explanation = _explain_infeasibility(plan, 1, "minimize workdays")
+        raise RuntimeError(f"Status: {status}\n\n{explanation}")
     best_work = solver.Value(workdays)
     current_wall = solver.WallTime()
     total_wall += current_wall - last_wall
     last_wall = current_wall
     model.Add(workdays == best_work)
 
-    # 2) Minimize b2b
-    model.Minimize(b2b_sum)
-    r = solver.Solve(model)
-    statuses.append(_status_name(r))
-    if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        raise RuntimeError("CP-SAT failed for objective 2")
-    best_b2b = solver.Value(b2b_sum)
-    current_wall = solver.WallTime()
-    total_wall += current_wall - last_wall
-    last_wall = current_wall
-    model.Add(b2b_sum == best_b2b)
-
-    # 3) Minimize abs_diff
+    # 2) Minimize abs_diff
     model.Minimize(abs_diff)
     r = solver.Solve(model)
-    statuses.append(_status_name(r))
+    status = _status_name(r)
+    statuses.append(status)
     if r not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        raise RuntimeError("CP-SAT failed for objective 3")
+        explanation = _explain_infeasibility(plan, 2, "minimize final balance difference")
+        raise RuntimeError(f"Status: {status}\n\n{explanation}")
     best_abs = solver.Value(abs_diff)
     current_wall = solver.WallTime()
     total_wall += current_wall - last_wall
     last_wall = current_wall
     model.Add(abs_diff == best_abs)
 
-    return best_work, best_b2b, best_abs, statuses, total_wall
+    return best_work, best_abs, statuses, total_wall
 
 
 def solve_lex(plan: Plan, options: Optional[CPSATSolveOptions] = None) -> CPSATSolution:
@@ -434,8 +471,8 @@ def solve_lex(plan: Plan, options: Optional[CPSATSolveOptions] = None) -> CPSATS
     opts = options or CPSATSolveOptions()
     model, x, obj_parts, final_close = _build_model(plan)
     solver = cp_model.CpSolver()
-    w, b2b, absd, statuses, wall = _solve_sequential_lex(
-        model, obj_parts, solver, opts
+    w, absd, statuses, wall = _solve_sequential_lex(
+        model, obj_parts, solver, opts, plan
     )
 
     # Extract actions from the solved one-hot variables.
@@ -454,7 +491,7 @@ def solve_lex(plan: Plan, options: Optional[CPSATSolveOptions] = None) -> CPSATS
     final_cents = solver.Value(final_close)
     sol = CPSATSolution(
         actions=actions,
-        objective=(w, b2b, absd),
+        objective=(w, absd),
         final_closing_cents=final_cents,
         statuses=statuses,
         solve_seconds=wall,
@@ -471,7 +508,7 @@ def verify_lex_optimal(plan: Plan, schedule_dp) -> VerificationReport:
         return VerificationReport(
             ok=False,
             dp_obj=schedule_dp.objective,
-            cp_obj=(-1, -1, -1),
+            cp_obj=(-1, -1),
             dp_actions=schedule_dp.actions,
             cp_actions=[],
             detail=f"CP-SAT error: {e}",

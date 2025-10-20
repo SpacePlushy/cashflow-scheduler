@@ -19,8 +19,8 @@ def test_cpsat_matches_dp_objective(sample_plan):
 
     assert result.schedule.objective == dp_schedule.objective
     assert result.schedule.final_closing_cents == dp_schedule.final_closing_cents
-    # 3 statuses for 3-part lexicographic objective (workdays, b2b, |Δ|)
-    assert len(result.statuses) == 3
+    # 2 statuses for 2-part lexicographic objective (workdays, |Δ|)
+    assert len(result.statuses) == 2
 
 
 def test_cpsat_fallback_to_dp(monkeypatch, sample_plan):

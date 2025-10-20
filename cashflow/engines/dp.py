@@ -20,7 +20,6 @@ Action = str  # 'O' or 'Spark'
 @dataclass
 class _StateVal:
     # costs that are additive across days
-    b2b: int
     back: Optional[Tuple]  # (prev_state_key, action)
 
 
@@ -38,13 +37,6 @@ def _allowed_actions(
     return ["O", "Spark"]
 
 
-def _has_off_off(vec: List[int]) -> bool:
-    for i in range(len(vec) - 1):
-        if vec[i] == 1 and vec[i + 1] == 1:
-            return True
-    return False
-
-
 def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
     dep, bills, base = build_prefix_arrays(plan)
 
@@ -58,19 +50,16 @@ def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
     pre30 = pre_rent_base_on_day30(plan, dep, bills)
 
     # DP layers: dict[state_key] = _StateVal
-    # State key: (last6_off_tuple, prevWorked:int, workUsed:int, net:int)
-    # last6_off_tuple: tuple[int,...] oldest->newest, len<=6
+    # State key: (workUsed:int, net:int)
     layers: List[Dict[Tuple, _StateVal]] = []
-    s0: Dict[Tuple, _StateVal] = {((), 0, 0, 0): _StateVal(b2b=0, back=None)}
+    s0: Dict[Tuple, _StateVal] = {(0, 0): _StateVal(back=None)}
     layers.append(s0)
 
     for day in range(1, 31):
         prev_layer = layers[-1]
         cur: Dict[Tuple, _StateVal] = {}
 
-        for (last6_off, prevW, workUsed, net), val in prev_layer.items():
-            last6_off_tuple: Tuple[int, ...] = last6_off if isinstance(last6_off, tuple) else tuple(last6_off)  # type: ignore
-
+        for (workUsed, net), val in prev_layer.items():
             locked = plan.actions[day - 1] if day - 1 < len(plan.actions) else None
             for a in _allowed_actions(day, locked, forbid_large_after_day1):
                 will_work = 1 if a != "O" else 0
@@ -85,16 +74,6 @@ def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
                 if net_new + MAX_DAY_NET * days_left < min_net:
                     continue
 
-                # Off-Off window check
-                off_today = 1 if a == "O" else 0
-                # Build 7-day window view for feasibility check (keep full 7)
-                last7 = list(last6_off_tuple) + [off_today]
-                if day >= 7:
-                    if not _has_off_off(last7):
-                        continue
-                # Store last 6 bits for next state's memory (oldest dropped)
-                last6_new = tuple(last7[-6:])
-
                 # Balance feasibility for day t
                 closing_t = base[day] + net_new
                 if closing_t < 0:
@@ -104,28 +83,20 @@ def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
                     if pre30 + net_new < plan.rent_guard_cents:
                         continue
 
-                # Update costs
-                b2b_new = val.b2b + (1 if (prevW == 1 and will_work == 1) else 0)
-
-                state_key = (last6_new, 1 if will_work else 0, work_used_new, net_new)
+                state_key = (work_used_new, net_new)
                 new_val = _StateVal(
-                    b2b=b2b_new,
-                    back=((last6_off_tuple, prevW, workUsed, net), a),
+                    back=((workUsed, net), a),
                 )
 
-                # Keep lexicographically best by (work_used, b2b)
-                existing = cur.get(state_key)
-                if existing is None or (work_used_new, b2b_new) < (
-                    work_used_new,
-                    existing.b2b,
-                ):
+                # Keep the state (only one per key now since no b2b to compare)
+                if state_key not in cur:
                     cur[state_key] = new_val
 
         layers.append(cur)
 
     # Select best final state within band
-    best_tuple: Optional[Tuple[Tuple[int, int, int], Tuple, _StateVal]] = None
-    for (last6_off, prevW, workUsed, net), val in layers[-1].items():
+    best_tuple: Optional[Tuple[Tuple[int, int], Tuple, _StateVal]] = None
+    for (workUsed, net), val in layers[-1].items():
         final_closing = base[30] + net
         if not (
             plan.target_end_cents - plan.band_cents
@@ -134,9 +105,9 @@ def solve(plan: Plan, *, forbid_large_after_day1: bool = False) -> Schedule:
         ):
             continue
         abs_delta = abs(final_closing - plan.target_end_cents)
-        obj = (workUsed, val.b2b, abs_delta)
+        obj = (workUsed, abs_delta)
         if best_tuple is None or obj < best_tuple[0]:
-            best_tuple = (obj, (last6_off, prevW, workUsed, net), val)
+            best_tuple = (obj, (workUsed, net), val)
 
     if best_tuple is None:
         raise RuntimeError("No feasible schedule found under constraints and band")

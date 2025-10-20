@@ -1,0 +1,145 @@
+===============================================================================
+CASHFLOW CP-SAT SOLVER - QUICK START GUIDE
+===============================================================================
+
+FILE: cashflow-cpsat-minimal.zip (12 KB)
+
+WHAT IT DOES:
+Optimizes a 30-day work schedule to minimize workdays while meeting
+financial constraints (bills, deposits, target balance).
+
+-------------------------------------------------------------------------------
+SETUP (3 COMMANDS)
+-------------------------------------------------------------------------------
+
+1. Extract:
+   unzip cashflow-cpsat-minimal.zip
+   cd cashflow-cpsat-minimal/
+
+2. Install OR-Tools:
+   pip3 install ortools
+
+3. Test it works:
+   python3 -c "
+from cashflow.core.model import Plan, Deposit, Bill, to_cents
+from cashflow.engines.cpsat import solve_with_diagnostics
+
+plan = Plan(
+    start_balance_cents=to_cents(90.50),
+    target_end_cents=to_cents(490.50),
+    band_cents=to_cents(25.0),
+    rent_guard_cents=to_cents(1636.0),
+    deposits=[Deposit(day=11, amount_cents=to_cents(1021.0))],
+    bills=[Bill(day=1, name='Auto', amount_cents=to_cents(177.0)),
+           Bill(day=30, name='Rent', amount_cents=to_cents(1636.0))],
+    actions=[None] * 30,
+    manual_adjustments=[],
+    locks=[],
+    metadata={}
+)
+
+result = solve_with_diagnostics(plan)
+print(f'✓ Workdays: {result.schedule.objective[0]}')
+print(f'✓ Schedule: {\" \".join(result.schedule.actions)}')
+"
+
+   Expected output:
+   ✓ Workdays: 12
+   ✓ Schedule: Spark O Spark O Spark O O O Spark O...
+
+-------------------------------------------------------------------------------
+MINIMAL EXAMPLE (save as test.py)
+-------------------------------------------------------------------------------
+
+from cashflow.core.model import Plan, Deposit, Bill, to_cents
+from cashflow.engines.cpsat import solve_with_diagnostics
+
+# Create your plan
+plan = Plan(
+    start_balance_cents=to_cents(90.50),      # Starting with $90.50
+    target_end_cents=to_cents(490.50),        # Want to end with ~$490.50
+    band_cents=to_cents(25.0),                # ±$25 tolerance
+    rent_guard_cents=to_cents(1636.0),        # Must have $1636 before rent
+    deposits=[                                 # Money coming in
+        Deposit(day=11, amount_cents=to_cents(1021.0))
+    ],
+    bills=[                                    # Money going out
+        Bill(day=1, name="Auto", amount_cents=to_cents(177.0)),
+        Bill(day=30, name="Rent", amount_cents=to_cents(1636.0)),
+    ],
+    actions=[None] * 30,                       # Let solver decide all days
+    manual_adjustments=[],                     # No manual corrections
+    locks=[],                                  # No locked days
+    metadata={}
+)
+
+# Solve
+result = solve_with_diagnostics(plan)
+schedule = result.schedule
+
+# Results
+print(f"Workdays needed: {schedule.objective[0]}")
+print(f"Back-to-back pairs: {schedule.objective[1]}")
+print(f"Difference from target: ${schedule.objective[2]/100:.2f}")
+print(f"Final balance: ${schedule.final_closing_cents/100:.2f}")
+print(f"\nSchedule: {' '.join(schedule.actions)}")
+
+-------------------------------------------------------------------------------
+RUN IT
+-------------------------------------------------------------------------------
+
+python3 test.py
+
+-------------------------------------------------------------------------------
+ACTIONS EXPLAINED
+-------------------------------------------------------------------------------
+
+Spark = Work day (+$100)
+O     = Off day  ($0)
+
+-------------------------------------------------------------------------------
+WHAT'S INCLUDED IN ZIP
+-------------------------------------------------------------------------------
+
+cashflow/
+  core/
+    model.py   - Data structures (Plan, Schedule, Bill, Deposit)
+    ledger.py  - Daily ledger builder
+  engines/
+    cpsat.py   - CP-SAT constraint solver
+plan.json      - Example plan (can load with json.load)
+CPSAT-README.md - Full documentation
+
+-------------------------------------------------------------------------------
+REQUIREMENTS
+-------------------------------------------------------------------------------
+
+Python:   3.9+
+OR-Tools: 9.8+ (9.10+ recommended)
+Platform: Linux, macOS, Windows
+
+-------------------------------------------------------------------------------
+TROUBLESHOOTING
+-------------------------------------------------------------------------------
+
+Error: "No module named 'ortools'"
+→ pip3 install ortools
+
+Error: "No module named 'cashflow'"
+→ Make sure cashflow/ folder is in same directory as your script
+→ Run: ls -la (should see cashflow/ folder)
+
+Error: "No feasible schedule found"
+→ Constraints too tight, try increasing band_cents
+
+-------------------------------------------------------------------------------
+FULL DOCS
+-------------------------------------------------------------------------------
+
+See CPSAT-README.md in the zip file for:
+- Loading plans from JSON
+- Detailed usage examples
+- Parameter explanations
+- Advanced troubleshooting
+
+===============================================================================

@@ -13,6 +13,6 @@ def test_regression_objective_and_final():
     assert s1.final_closing_cents == s2.final_closing_cents
 
     # Lock current baseline (update if solver logic changes intentionally)
-    # Updated for low_bills branch: removed car payment, reduced auto insurance
-    assert s1.objective == (12, 0, 4847)
+    # Updated to remove Off-Off window constraint and b2b metric
+    assert s1.objective == (12, 4847)
     assert s1.final_closing_cents == 4203

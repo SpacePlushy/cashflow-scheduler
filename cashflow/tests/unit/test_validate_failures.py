@@ -56,5 +56,3 @@ def test_validate_detects_rule_failures():
     assert results["Non-negative balances"][0] is False
     assert results["Final within band"][0] is False
     assert results["Day-30 pre-rent guard"][0] is False
-    # All O's means there ARE consecutive off-days, so this check passes
-    assert results["7-day Off,Off present"][0] is True

@@ -17,9 +17,9 @@ def render_markdown(schedule: Schedule) -> str:
             f"| {row.day:>3} | {cents_to_str(row.opening_cents):>7} | {row.action:^6} | {cents_to_str(row.net_cents):>6} | {cents_to_str(row.deposit_cents):>8} | {cents_to_str(row.bills_cents):>5} | {cents_to_str(row.closing_cents):>7} |"
         )
     lines.append("")
-    w, b2b, delta = schedule.objective
+    w, delta = schedule.objective
     lines.append(
-        f"Objective: workdays={w}, b2b={b2b}, |Δ|={cents_to_str(delta)}"
+        f"Objective: workdays={w}, |Δ|={cents_to_str(delta)}"
     )
     lines.append(f"Final closing: {cents_to_str(schedule.final_closing_cents)}")
     return "\n".join(lines)

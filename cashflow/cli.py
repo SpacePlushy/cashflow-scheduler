@@ -163,7 +163,7 @@ def cmd_verify(
     typer.echo("DP Objective:   " + str(schedule.objective))
     typer.echo("CP-SAT Objective: " + str(report.cp_obj))
     if getattr(report, "statuses", None):
-        names = ["workdays", "b2b", "|Δ|"]
+        names = ["workdays", "|Δ|"]
         typer.echo("Solver statuses:")
         for i, s in enumerate(report.statuses or []):
             label = names[i] if i < len(names) else f"part{i+1}"

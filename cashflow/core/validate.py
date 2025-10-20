@@ -18,13 +18,6 @@ class ValidationReport:
     checks: List[Tuple[str, bool, str]]  # (name, pass, detail)
 
 
-def _has_off_off_last7(off_flags_7: List[int]) -> bool:
-    for i in range(6):
-        if off_flags_7[i] == 1 and off_flags_7[i + 1] == 1:
-            return True
-    return False
-
-
 def validate(plan: Plan, schedule: Schedule) -> ValidationReport:
     dep, bills, base = build_prefix_arrays(plan)
     checks: List[Tuple[str, bool, str]] = []
@@ -60,16 +53,6 @@ def validate(plan: Plan, schedule: Schedule) -> ValidationReport:
             f"{pre_rent_balance}>= {plan.rent_guard_cents}",
         )
     )
-
-    # Off-Off in each rolling 7-day window
-    off = [1 if a == "O" else 0 for a in schedule.actions]
-    off_ok = True
-    for s in range(0, 24):
-        window7 = off[s : s + 7]
-        if not _has_off_off_last7(window7):
-            off_ok = False
-            break
-    checks.append(("7-day Off,Off present", off_ok, "every 7-day window"))
 
     ok = all(p for _, p, _ in checks)
     return ValidationReport(ok=ok, checks=checks)
