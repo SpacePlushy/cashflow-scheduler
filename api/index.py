@@ -106,8 +106,8 @@ async def health():
 
 @app.post("/solve", dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
-async def solve(req: Request):
-    body = await _read_body(req)
+async def solve(request: Request):
+    body = await _read_body(request)
     try:
         plan_payload = _extract_plan_payload(body)
         plan = _plan_from_payload(plan_payload)
@@ -154,8 +154,8 @@ async def solve(req: Request):
 
 @app.post("/set_eod", dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
-async def set_eod(req: Request):
-    body = await _read_body(req)
+async def set_eod(request: Request):
+    body = await _read_body(request)
 
     # Validate input types with proper error handling
     try:
@@ -234,8 +234,8 @@ async def set_eod(req: Request):
 
 @app.post("/export", dependencies=[Depends(verify_api_key)])
 @limiter.limit("20/minute")
-async def export(req: Request):
-    body = await _read_body(req)
+async def export(request: Request):
+    body = await _read_body(request)
     fmt = str(body.get("format", "md")).lower()
     if fmt not in ("md", "csv", "json"):
         return JSONResponse({"error": "format must be md|csv|json"}, status_code=400)
