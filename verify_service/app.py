@@ -1,13 +1,27 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+import os
+import logging
+import secrets
+
+from fastapi import FastAPI, Request, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from cashflow.engines.dp import solve as dp_solve
 from cashflow.engines.cpsat import verify_lex_optimal
 from cashflow.io.store import load_plan
 from cashflow.core.model import Plan, Bill, Deposit, Adjustment, to_cents
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 def _embedded_plan() -> Plan:
@@ -71,18 +85,71 @@ class VerifyOut(BaseModel):
     detail: str
 
 
-app = FastAPI(title="Cashflow Verify Service")
+# Configure CORS origins from environment (more restrictive default)
+CORS_ORIGINS_RAW = os.getenv("CORS_ORIGINS", "")
+if CORS_ORIGINS_RAW:
+    CORS_ORIGINS = [origin.strip() for origin in CORS_ORIGINS_RAW.split(",")]
+else:
+    # Default to localhost for development
+    CORS_ORIGINS = ["http://localhost:3000", "http://localhost:3001"]
+    logger.warning("CORS_ORIGINS not set, using development defaults. Set CORS_ORIGINS env var for production.")
 
-# Allow browser calls from your UI origins (update as needed)
+# API key authentication (optional)
+API_KEY = os.getenv("API_KEY")
+REQUIRE_API_KEY = os.getenv("REQUIRE_API_KEY", "false").lower() == "true"
+
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/hour"])
+
+app = FastAPI(title="Cashflow Verify Service")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS middleware with secure defaults
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "*",  # TODO: replace with your Vercel UI origin for production
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-API-Key"],
+    allow_credentials=False,
+    max_age=3600,
 )
+
+
+# Security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Content-Security-Policy"] = "default-src 'self'"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
+# Optional API key authentication
+async def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
+    """Verify API key if authentication is required."""
+    if not REQUIRE_API_KEY:
+        return None
+
+    if not API_KEY:
+        logger.error("REQUIRE_API_KEY is true but API_KEY is not set")
+        raise HTTPException(status_code=500, detail="Server configuration error")
+
+    if not x_api_key:
+        logger.warning("API key missing from request")
+        raise HTTPException(status_code=401, detail="API key required")
+
+    # Use constant-time comparison to prevent timing attacks
+    if not secrets.compare_digest(x_api_key, API_KEY):
+        logger.warning("Invalid API key attempt")
+        raise HTTPException(status_code=403, detail="Invalid API key")
+
+    return x_api_key
 
 
 @app.get("/health")
@@ -95,14 +162,20 @@ def root():
     return {"service": "cashflow-verify", "status": "ok"}
 
 
-@app.post("/verify", response_model=VerifyOut)
-def verify():
-    plan = load_default_plan()
-    schedule = dp_solve(plan)
-    report = verify_lex_optimal(plan, schedule)
-    return VerifyOut(
-        ok=report.ok,
-        dp_obj=list(report.dp_obj),
-        cp_obj=list(report.cp_obj),
-        detail=report.detail,
-    )
+@app.post("/verify", response_model=VerifyOut, dependencies=[Depends(verify_api_key)])
+@limiter.limit("30/hour")
+def verify(request: Request):
+    """Verify DP solution against CP-SAT solver."""
+    try:
+        plan = load_default_plan()
+        schedule = dp_solve(plan)
+        report = verify_lex_optimal(plan, schedule)
+        return VerifyOut(
+            ok=report.ok,
+            dp_obj=list(report.dp_obj),
+            cp_obj=list(report.cp_obj),
+            detail=report.detail,
+        )
+    except Exception as e:
+        logger.error(f"Error in verify endpoint: {e}")
+        raise HTTPException(status_code=500, detail="Verification failed")

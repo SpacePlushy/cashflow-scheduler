@@ -1,14 +1,41 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from typing import Dict, List, Optional, Tuple
+
+# Maximum monetary value: $10 million in cents (reasonable upper bound)
+MAX_AMOUNT_CENTS = 1_000_000_000  # $10,000,000
 
 
 # Money utils (integer cents only)
 def to_cents(amount: float | int | str | Decimal) -> int:
-    d = Decimal(str(amount)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    return int(d * 100)
+    """Convert monetary amount to integer cents with overflow protection.
+
+    Args:
+        amount: Monetary value as float, int, string, or Decimal
+
+    Returns:
+        Integer cents value
+
+    Raises:
+        ValueError: If amount exceeds MAX_AMOUNT_CENTS or is invalid
+    """
+    try:
+        d = Decimal(str(amount)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    except (InvalidOperation, ValueError) as e:
+        raise ValueError(f"Invalid monetary amount: {amount}") from e
+
+    cents = int(d * 100)
+
+    # Check for overflow
+    if abs(cents) > MAX_AMOUNT_CENTS:
+        raise ValueError(
+            f"Amount {amount} exceeds maximum allowed value "
+            f"(${MAX_AMOUNT_CENTS / 100:,.2f})"
+        )
+
+    return cents
 
 
 def cents_to_str(cents: int) -> str:

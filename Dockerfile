@@ -11,16 +11,23 @@ RUN apt-get update && apt-get install -y \
     make \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user
+RUN useradd -m -u 1000 -s /bin/bash appuser && \
+    chown -R appuser:appuser /app
+
 # Copy requirements and install Python dependencies
-COPY requirements.txt .
+COPY --chown=appuser:appuser requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY cashflow/ ./cashflow/
-COPY api/ ./api/
+COPY --chown=appuser:appuser cashflow/ ./cashflow/
+COPY --chown=appuser:appuser api/ ./api/
 
 # Set Python path
 ENV PYTHONPATH=/app
+
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 8000
