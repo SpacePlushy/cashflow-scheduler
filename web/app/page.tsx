@@ -149,66 +149,123 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* Header - Mobile Optimized */}
       <motion.header
         className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50"
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CalendarIcon className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-2xl font-bold">Cashflow Scheduler</h1>
-              <p className="text-sm text-muted-foreground">
-                30-day optimization with constraint programming
-              </p>
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          {/* Mobile: Stacked Layout */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {/* Top Row: Logo, Title, Theme */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="h-6 w-6 text-primary" />
+                <div>
+                  <h1 className="text-lg font-bold">Cashflow Scheduler</h1>
+                  <p className="text-xs text-muted-foreground">
+                    30-day optimization
+                  </p>
+                </div>
+              </div>
+              <ModeToggle />
             </div>
-          </div>
-          <div className="flex items-center gap-3">
+
+            {/* Bottom Row: Solver Controls */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 border rounded-md p-0.5 flex-1">
+                <Button
+                  onClick={() => setSolver("cpsat")}
+                  variant={solver === "cpsat" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-7 flex-1 text-xs"
+                >
+                  CP-SAT
+                </Button>
+                <Button
+                  onClick={() => setSolver("dp")}
+                  variant={solver === "dp" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-7 flex-1 text-xs"
+                >
+                  DP
+                </Button>
+              </div>
+              <Button
+                onClick={handleResolve}
+                disabled={isResolving}
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-7"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isResolving ? 'animate-spin' : ''}`} />
+                <span className="text-xs">{isResolving ? 'Solving' : 'Re-run'}</span>
+              </Button>
+            </div>
+
+            {/* Solver Info Badge */}
             {schedule.solver && (
-              <Badge variant="outline" className="hidden sm:flex">
-                Solver: {schedule.solver.name} ({schedule.solver.seconds.toFixed(2)}s)
+              <Badge variant="outline" className="w-fit text-xs">
+                {schedule.solver.name} • {schedule.solver.seconds.toFixed(2)}s
               </Badge>
             )}
-            <div className="flex items-center gap-2 border rounded-md p-1">
-              <Button
-                onClick={() => setSolver("cpsat")}
-                variant={solver === "cpsat" ? "default" : "ghost"}
-                size="sm"
-                className="h-8"
-              >
-                CP-SAT
-              </Button>
-              <Button
-                onClick={() => setSolver("dp")}
-                variant={solver === "dp" ? "default" : "ghost"}
-                size="sm"
-                className="h-8"
-              >
-                DP
-              </Button>
+          </div>
+
+          {/* Desktop: Original Layout */}
+          <div className="hidden md:flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CalendarIcon className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="text-2xl font-bold">Cashflow Scheduler</h1>
+                <p className="text-sm text-muted-foreground">
+                  30-day optimization with constraint programming
+                </p>
+              </div>
             </div>
-            <Button
-              onClick={handleResolve}
-              disabled={isResolving}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${isResolving ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">
+            <div className="flex items-center gap-3">
+              {schedule.solver && (
+                <Badge variant="outline">
+                  Solver: {schedule.solver.name} ({schedule.solver.seconds.toFixed(2)}s)
+                </Badge>
+              )}
+              <div className="flex items-center gap-2 border rounded-md p-1">
+                <Button
+                  onClick={() => setSolver("cpsat")}
+                  variant={solver === "cpsat" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-8"
+                >
+                  CP-SAT
+                </Button>
+                <Button
+                  onClick={() => setSolver("dp")}
+                  variant={solver === "dp" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-8"
+                >
+                  DP
+                </Button>
+              </div>
+              <Button
+                onClick={handleResolve}
+                disabled={isResolving}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isResolving ? 'animate-spin' : ''}`} />
                 {isResolving ? 'Solving...' : 'Re-run Solver'}
-              </span>
-            </Button>
-            <ModeToggle />
+              </Button>
+              <ModeToggle />
+            </div>
           </div>
         </div>
       </motion.header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 space-y-6">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6">
         {/* Financial Summary Cards */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}

@@ -25,17 +25,23 @@ export function LedgerTable({ schedule }: LedgerTableProps) {
   };
 
   return (
-    <div className="max-h-[600px] overflow-y-auto rounded-md border">
-          <Table>
+    <div>
+      {/* Mobile hint */}
+      <div className="md:hidden text-xs text-muted-foreground mb-2 px-2">
+        Scroll horizontally to see all columns →
+      </div>
+
+      <div className="max-h-[600px] overflow-auto rounded-md border">
+          <Table className="min-w-[600px]">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead className="w-12">Day</TableHead>
-                <TableHead className="text-right">Opening</TableHead>
-                <TableHead className="text-right">Deposits</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead className="text-right">Net</TableHead>
-                <TableHead className="text-right">Bills</TableHead>
-                <TableHead className="text-right">Closing</TableHead>
+                <TableHead className="w-12 sticky left-0 bg-background z-20">Day</TableHead>
+                <TableHead className="text-right text-xs sm:text-sm">Opening</TableHead>
+                <TableHead className="text-right text-xs sm:text-sm">Deposits</TableHead>
+                <TableHead className="text-xs sm:text-sm">Action</TableHead>
+                <TableHead className="text-right text-xs sm:text-sm">Net</TableHead>
+                <TableHead className="text-right text-xs sm:text-sm">Bills</TableHead>
+                <TableHead className="text-right text-xs sm:text-sm sticky right-0 bg-background z-20">Closing</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -52,12 +58,12 @@ export function LedgerTable({ schedule }: LedgerTableProps) {
                       isWorkDay && "border-l-4 border-l-blue-500"
                     )}
                   >
-                    <TableCell className="font-medium">{row.day}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">
+                    <TableCell className="font-medium sticky left-0 bg-inherit z-10">{row.day}</TableCell>
+                    <TableCell className="text-right text-muted-foreground text-xs sm:text-sm whitespace-nowrap">
                       ${row.opening}
                     </TableCell>
                     <TableCell className={cn(
-                      "text-right",
+                      "text-right text-xs sm:text-sm whitespace-nowrap",
                       hasDeposit && "text-green-600 font-medium"
                     )}>
                       {hasDeposit ? `+$${row.deposits}` : "-"}
@@ -65,7 +71,7 @@ export function LedgerTable({ schedule }: LedgerTableProps) {
                     <TableCell>
                       <span
                         className={cn(
-                          "px-2 py-1 rounded text-xs font-medium",
+                          "px-2 py-1 rounded text-[10px] sm:text-xs font-medium whitespace-nowrap",
                           isWorkDay
                             ? "bg-blue-500/20 text-blue-700 dark:text-blue-300"
                             : "bg-muted text-muted-foreground"
@@ -75,19 +81,19 @@ export function LedgerTable({ schedule }: LedgerTableProps) {
                       </span>
                     </TableCell>
                     <TableCell className={cn(
-                      "text-right",
+                      "text-right text-xs sm:text-sm whitespace-nowrap",
                       parseFloat(row.net) > 0 ? "text-green-600" : "text-muted-foreground"
                     )}>
                       {parseFloat(row.net) > 0 ? `+$${row.net}` : "$0.00"}
                     </TableCell>
                     <TableCell className={cn(
-                      "text-right",
+                      "text-right text-xs sm:text-sm whitespace-nowrap",
                       hasBills && "text-red-600 font-medium"
                     )}>
                       {hasBills ? `-$${row.bills}` : "-"}
                     </TableCell>
                     <TableCell className={cn(
-                      "text-right font-semibold",
+                      "text-right font-semibold text-xs sm:text-sm sticky right-0 bg-inherit z-10 whitespace-nowrap",
                       getBalanceColor(row.closing)
                     )}>
                       ${row.closing}
@@ -98,5 +104,6 @@ export function LedgerTable({ schedule }: LedgerTableProps) {
             </TableBody>
           </Table>
         </div>
+      </div>
   );
 }
