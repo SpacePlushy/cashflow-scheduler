@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { FinancialSummary } from "@/components/financial-summary";
 import { ScheduleCalendar } from "@/components/schedule-calendar";
 import { LedgerTable } from "@/components/ledger-table";
@@ -19,7 +19,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Loader2, AlertCircle, Calendar as CalendarIcon, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
-import { fadeIn, fadeInUp } from "@/lib/animations";
 
 export default function Home() {
   const [schedule, setSchedule] = useState<Schedule | null>(null);

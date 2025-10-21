@@ -59,7 +59,7 @@ export function ScheduleCalendar({ schedule, bills }: ScheduleCalendarProps) {
           initial="hidden"
           animate="visible"
         >
-          {schedule.ledger.map((row, index) => {
+          {schedule.ledger.map((row) => {
             const dayBills = getBillsForDay(row.day);
             const isWorkDay = row.action === "Spark";
             const hasDeposit = parseFloat(row.deposits) > 0;

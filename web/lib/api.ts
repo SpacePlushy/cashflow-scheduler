@@ -5,8 +5,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export type SolverType = "dp" | "cpsat";
 
 export async function solveSchedule(plan?: Plan, solver: SolverType = "cpsat"): Promise<Schedule> {
-  const payload: any = plan ? { plan } : {};
-  payload.solver = solver;
+  const payload: { plan?: Plan; solver: SolverType } = plan ? { plan, solver } : { solver };
 
   const response = await fetch(`${API_BASE_URL}/solve`, {
     method: "POST",
