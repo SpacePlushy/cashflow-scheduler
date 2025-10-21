@@ -22,6 +22,11 @@ def load_plan(path: str | Path, allowed_dir: Optional[Path] = None) -> Plan:
         ValueError: If path is outside allowed directory or contains traversal attempts
         FileNotFoundError: If file doesn't exist
     """
+    # Check for path traversal patterns BEFORE resolving
+    path_str = str(path)
+    if ".." in path_str or path_str.startswith("/etc") or path_str.startswith("/sys"):
+        raise ValueError(f"Potentially unsafe path: {path}")
+
     p = Path(path).resolve()  # Resolve symlinks and relative paths
 
     # Optional path traversal protection
@@ -34,11 +39,6 @@ def load_plan(path: str | Path, allowed_dir: Optional[Path] = None) -> Plan:
             raise ValueError(
                 f"Path traversal detected: {path} is outside allowed directory {allowed_dir}"
             ) from None
-
-    # Additional check for common path traversal patterns
-    path_str = str(path)
-    if ".." in path_str or path_str.startswith("/etc") or path_str.startswith("/sys"):
-        raise ValueError(f"Potentially unsafe path: {path}")
 
     data = json.loads(p.read_text())
     return plan_from_dict(data)

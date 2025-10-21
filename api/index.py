@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import logging
 import json
+import secrets
 from typing import Any, Mapping, cast
 
 from fastapi import FastAPI, Request, HTTPException, Header, Depends
@@ -19,7 +20,7 @@ from ._shared import (
 )
 from cashflow.io.render import render_markdown, render_csv, render_json
 from cashflow.core.ledger import build_ledger
-from cashflow.core.model import Adjustment, Plan
+from cashflow.core.model import Adjustment, Plan, MAX_AMOUNT_CENTS
 from cashflow.io.store import plan_from_dict
 from cashflow.engines.cpsat import solve_with_diagnostics
 
@@ -90,7 +91,8 @@ async def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
         logger.warning("API key missing from request")
         raise HTTPException(status_code=401, detail="API key required")
 
-    if x_api_key != API_KEY:
+    # Use constant-time comparison to prevent timing attacks
+    if not secrets.compare_digest(x_api_key, API_KEY):
         logger.warning(f"Invalid API key attempt")
         raise HTTPException(status_code=403, detail="Invalid API key")
 
@@ -172,8 +174,9 @@ async def set_eod(req: Request):
     if not (1 <= day <= 30):
         return JSONResponse({"error": "day must be in 1..30"}, status_code=400)
 
-    # Reasonable bounds on EOD amount ($1M)
-    if not (-1_000_000 <= eod_amount <= 1_000_000):
+    # Reasonable bounds on EOD amount (consistent with MAX_AMOUNT_CENTS = $10M)
+    max_dollars = MAX_AMOUNT_CENTS / 100
+    if not (-max_dollars <= eod_amount <= max_dollars):
         return JSONResponse({"error": "eod_amount out of reasonable range"}, status_code=400)
 
     try:

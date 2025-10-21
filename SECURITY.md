@@ -24,6 +24,11 @@ All API endpoints are rate-limited to prevent DoS attacks:
 - `/export`: 20 requests/minute
 - `/verify`: 30 requests/hour (verify service)
 
+**Serverless Limitation:** The current rate limiting implementation uses in-memory storage (slowapi default). In serverless environments (e.g., Vercel), each request may be handled by a different container instance, which means rate limits may not be effectively enforced across requests. For production serverless deployments, consider:
+- Using Redis-backed rate limiting storage
+- Implementing API gateway-level rate limiting (e.g., Vercel Edge Config, AWS API Gateway)
+- Using a dedicated rate limiting service (e.g., Upstash Rate Limit)
+
 #### API Key Authentication (Optional)
 API key authentication can be enabled for production deployments:
 
@@ -182,15 +187,20 @@ Comprehensive logging for security monitoring:
 
 ## Known Limitations
 
-1. **No User Management**
+1. **Rate Limiting in Serverless Environments**
+   - In-memory rate limiting doesn't persist across serverless function instances
+   - Each container may have its own rate limit counter
+   - For effective rate limiting in production, use Redis or API gateway-level controls
+
+2. **No User Management**
    - Single API key for all users
    - Consider adding OAuth2/JWT for multi-user scenarios
 
-2. **No Request Size Limits**
+3. **No Request Size Limits**
    - Large payloads could consume memory
    - Consider adding middleware for max body size
 
-3. **No WAF**
+4. **No WAF**
    - Consider using Web Application Firewall for production
    - AWS WAF, Cloudflare, etc.
 

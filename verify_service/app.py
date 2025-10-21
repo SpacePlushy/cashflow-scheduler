@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import logging
+import secrets
 
 from fastapi import FastAPI, Request, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -143,7 +144,8 @@ async def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
         logger.warning("API key missing from request")
         raise HTTPException(status_code=401, detail="API key required")
 
-    if x_api_key != API_KEY:
+    # Use constant-time comparison to prevent timing attacks
+    if not secrets.compare_digest(x_api_key, API_KEY):
         logger.warning("Invalid API key attempt")
         raise HTTPException(status_code=403, detail="Invalid API key")
 
