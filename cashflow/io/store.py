@@ -1,14 +1,45 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, Optional
 
 from ..core.model import Bill, Deposit, Plan, to_cents, Adjustment
 
 
-def load_plan(path: str | Path) -> Plan:
-    p = Path(path)
+def load_plan(path: str | Path, allowed_dir: Optional[Path] = None) -> Plan:
+    """Load a plan from a JSON file with optional path validation.
+
+    Args:
+        path: Path to the plan JSON file
+        allowed_dir: Optional directory to restrict file access to (for security)
+
+    Returns:
+        Plan object parsed from JSON
+
+    Raises:
+        ValueError: If path is outside allowed directory or contains traversal attempts
+        FileNotFoundError: If file doesn't exist
+    """
+    p = Path(path).resolve()  # Resolve symlinks and relative paths
+
+    # Optional path traversal protection
+    if allowed_dir is not None:
+        allowed = Path(allowed_dir).resolve()
+        try:
+            # Check if resolved path is within allowed directory
+            p.relative_to(allowed)
+        except ValueError:
+            raise ValueError(
+                f"Path traversal detected: {path} is outside allowed directory {allowed_dir}"
+            ) from None
+
+    # Additional check for common path traversal patterns
+    path_str = str(path)
+    if ".." in path_str or path_str.startswith("/etc") or path_str.startswith("/sys"):
+        raise ValueError(f"Potentially unsafe path: {path}")
+
     data = json.loads(p.read_text())
     return plan_from_dict(data)
 
