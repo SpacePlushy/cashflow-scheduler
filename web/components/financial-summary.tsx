@@ -44,21 +44,21 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
 
   return (
     <motion.div
-      className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+      className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
       <motion.div variants={cardVariants}>
         <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Workdays</CardTitle>
-          <Calendar className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+          <CardTitle className="text-xs sm:text-sm font-medium">Workdays</CardTitle>
+          <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{workdays}</div>
-          <p className="text-xs text-muted-foreground">
-            Out of 30 days
+        <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+          <div className="text-xl sm:text-2xl font-bold">{workdays}</div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
+            of 30 days
           </p>
         </CardContent>
       </Card>
@@ -66,14 +66,14 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
 
       <motion.div variants={cardVariants}>
         <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Final Balance</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+          <CardTitle className="text-xs sm:text-sm font-medium">Balance</CardTitle>
+          <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">${schedule.final_closing}</div>
-          <p className="text-xs text-muted-foreground">
-            Diff from target: ${(finalDiff / 100).toFixed(2)}
+        <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+          <div className="text-xl sm:text-2xl font-bold">${schedule.final_closing}</div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+            Diff: ${(finalDiff / 100).toFixed(2)}
           </p>
         </CardContent>
       </Card>
@@ -81,14 +81,14 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
 
       <motion.div variants={cardVariants}>
         <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Schedule Quality</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+          <CardTitle className="text-xs sm:text-sm font-medium">Quality</CardTitle>
+          <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{backToBackPairs}</div>
-          <p className="text-xs text-muted-foreground">
-            Back-to-back work pairs
+        <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+          <div className="text-xl sm:text-2xl font-bold">{backToBackPairs}</div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
+            B2B pairs
           </p>
         </CardContent>
       </Card>
@@ -96,21 +96,21 @@ export function FinancialSummary({ schedule }: FinancialSummaryProps) {
 
       <motion.div variants={cardVariants}>
         <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Validation</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+          <CardTitle className="text-xs sm:text-sm font-medium">Status</CardTitle>
           {allChecksPassed ? (
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />
           ) : (
-            <XCircle className="h-4 w-4 text-red-500" />
+            <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" />
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
           <div className="flex items-center gap-2">
-            <Badge variant={allChecksPassed ? "default" : "destructive"}>
-              {allChecksPassed ? "All Passed" : "Failed"}
+            <Badge variant={allChecksPassed ? "default" : "destructive"} className="text-[10px] sm:text-xs">
+              {allChecksPassed ? "Passed" : "Failed"}
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             {schedule.checks.filter(c => c[1]).length}/{schedule.checks.length} checks
           </p>
         </CardContent>
