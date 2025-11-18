@@ -3,20 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>November & December 2024 Financial Calendar</title>
+    <title>November & December 2024 | Financial Planning Calendar</title>
     <style>
+        /* Modern CSS Variables System */
         :root {
-            --primary: #2563eb;
-            --success: #16a34a;
-            --warning: #dc2626;
-            --info: #0891b2;
-            --light: #f8fafc;
-            --gray: #64748b;
-            --dark: #0f172a;
-            --border: #e2e8f0;
-            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            /* Primary Colors */
+            --color-primary: #1e293b;
+            --color-primary-light: #334155;
+            --color-primary-lighter: #475569;
+
+            /* Semantic Colors */
+            --color-work: #10b981;
+            --color-work-dark: #059669;
+            --color-off: #8b5cf6;
+            --color-off-dark: #7c3aed;
+            --color-deposit: #0ea5e9;
+            --color-deposit-dark: #0284c7;
+            --color-bill: #ef4444;
+            --color-bill-dark: #dc2626;
+            --color-move: #f97316;
+            --color-move-dark: #ea580c;
+
+            /* Neutral Colors */
+            --color-bg: #ffffff;
+            --color-bg-secondary: #f8fafc;
+            --color-bg-tertiary: #f1f5f9;
+            --color-text-primary: #0f172a;
+            --color-text-secondary: #64748b;
+            --color-text-tertiary: #94a3b8;
+            --color-border: #e2e8f0;
+            --color-border-light: #cbd5e1;
+
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.12);
+            --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.15);
+            --shadow-2xl: 0 25px 50px -12px rgba(15, 23, 42, 0.2);
+
+            /* Spacing */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+
+            /* Border Radius */
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-2xl: 1.5rem;
+
+            /* Typography */
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            --font-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
         }
 
+        /* Reset & Base Styles */
         * {
             margin: 0;
             padding: 0;
@@ -25,230 +71,353 @@
 
         html {
             scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            color: var(--dark);
+            font-family: var(--font-sans);
+            background: linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-tertiary) 100%);
+            color: var(--color-text-primary);
             line-height: 1.6;
             min-height: 100vh;
         }
 
+        /* Container */
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
-            padding: 40px 20px;
+            padding: var(--spacing-3xl) var(--spacing-xl);
         }
 
-        /* Header */
+        /* ===== HEADER SECTION ===== */
         .header {
             text-align: center;
-            margin-bottom: 60px;
+            margin-bottom: var(--spacing-3xl);
+            animation: slideDown 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        .header h1 {
-            font-size: 3.5rem;
+        .header__badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--color-deposit), var(--color-deposit-dark));
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .header__title {
+            font-size: 3rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            line-height: 1.1;
+            margin-bottom: var(--spacing-md);
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-deposit) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 15px;
-            letter-spacing: -1px;
+            letter-spacing: -0.02em;
         }
 
-        .header p {
+        .header__subtitle {
             font-size: 1.25rem;
-            color: var(--gray);
+            color: var(--color-text-secondary);
             max-width: 600px;
             margin: 0 auto;
+            font-weight: 400;
         }
 
-        /* Legend */
-        .legend {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            margin-bottom: 50px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-        }
-
-        .legend h2 {
-            font-size: 1.5rem;
-            margin-bottom: 25px;
-            color: var(--dark);
-            font-weight: 700;
-        }
-
-        .legend-grid {
+        /* ===== STATS OVERVIEW SECTION ===== */
+        .stats-overview {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-3xl);
+            animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .stat-card {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--color-text-tertiary);
+            transform: translateY(-2px);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--color-work), var(--color-deposit));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-card__icon {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-md);
+            display: block;
+        }
+
+        .stat-card__value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-xs);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-card__label {
+            font-size: 0.875rem;
+            color: var(--color-text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ===== LEGEND SECTION ===== */
+        .legend {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-2xl);
+            padding: var(--spacing-3xl) var(--spacing-2xl);
+            margin-bottom: var(--spacing-3xl);
+            box-shadow: var(--shadow-md);
+            animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+        }
+
+        .legend__title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: var(--spacing-2xl);
+            color: var(--color-primary);
+        }
+
+        .legend__grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-xl);
         }
 
         .legend-item {
             display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px;
-            background: var(--light);
-            border-radius: 12px;
-            border-left: 4px solid var(--primary);
+            gap: var(--spacing-lg);
+            padding: var(--spacing-lg);
+            background: var(--color-bg-secondary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--color-border-light);
+            transition: all 0.3s ease;
         }
 
-        .legend-dot {
-            width: 50px;
-            height: 50px;
-            border-radius: 10px;
-            flex-shrink: 0;
+        .legend-item:hover {
+            background: var(--color-bg-tertiary);
+            border-color: var(--color-border);
+        }
+
+        .legend-item__indicator {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
+            flex-shrink: 0;
             font-weight: bold;
         }
 
-        .legend-dot.work {
-            background: linear-gradient(135deg, #16a34a, #15803d);
-            color: white;
+        .legend-item__indicator--work {
+            background: linear-gradient(135deg, var(--color-work), var(--color-work-dark));
         }
 
-        .legend-dot.off {
-            background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-            color: #4f46e5;
+        .legend-item__indicator--off {
+            background: linear-gradient(135deg, var(--color-off), var(--color-off-dark));
         }
 
-        .legend-dot.deposit {
-            background: linear-gradient(135deg, #0891b2, #0e7490);
-            color: white;
+        .legend-item__indicator--deposit {
+            background: linear-gradient(135deg, var(--color-deposit), var(--color-deposit-dark));
         }
 
-        .legend-dot.bill {
-            background: linear-gradient(135deg, #dc2626, #b91c1c);
-            color: white;
+        .legend-item__indicator--bill {
+            background: linear-gradient(135deg, var(--color-bill), var(--color-bill-dark));
         }
 
-        .legend-dot.move {
-            background: linear-gradient(135deg, #ea580c, #c2410c);
-            color: white;
+        .legend-item__indicator--move {
+            background: linear-gradient(135deg, var(--color-move), var(--color-move-dark));
         }
 
-        .legend-text h3 {
+        .legend-item__content h3 {
+            font-size: 0.95rem;
             font-weight: 700;
-            margin-bottom: 5px;
-            color: var(--dark);
+            margin-bottom: var(--spacing-xs);
+            color: var(--color-primary);
         }
 
-        .legend-text p {
-            font-size: 0.9rem;
-            color: var(--gray);
+        .legend-item__content p {
+            font-size: 0.875rem;
+            color: var(--color-text-secondary);
+            line-height: 1.5;
         }
 
-        /* Calendars Container */
+        /* ===== CALENDARS SECTION ===== */
         .calendars {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
-            gap: 40px;
-            margin-bottom: 50px;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: var(--spacing-3xl);
+            margin-bottom: var(--spacing-3xl);
         }
 
-        /* Calendar Card */
         .calendar-card {
-            background: white;
-            border-radius: 16px;
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-2xl);
             overflow: hidden;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+            animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+            transition: all 0.3s ease;
         }
 
-        .calendar-header {
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        .calendar-card:hover {
+            box-shadow: var(--shadow-xl);
+        }
+
+        /* Calendar Header */
+        .calendar-card__header {
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
             color: white;
-            padding: 30px;
+            padding: var(--spacing-2xl);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .calendar-header h2 {
+        .calendar-card__month {
             font-size: 1.75rem;
-            margin-bottom: 15px;
             font-weight: 700;
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
         }
 
-        .calendar-stats {
+        .calendar-card__stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
+            gap: var(--spacing-md);
         }
 
-        .stat {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
+        .calendar-card__stat {
+            background: rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(10px);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
         }
 
-        .stat-value {
+        .calendar-card__stat:hover {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .calendar-card__stat-value {
             font-size: 1.5rem;
             font-weight: 700;
             display: block;
+            margin-bottom: var(--spacing-xs);
+            font-variant-numeric: tabular-nums;
         }
 
-        .stat-label {
-            font-size: 0.8rem;
+        .calendar-card__stat-label {
+            font-size: 0.75rem;
             opacity: 0.9;
-            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
         }
 
         /* Calendar Grid */
-        .calendar-grid {
-            padding: 30px;
+        .calendar-card__grid {
+            padding: var(--spacing-2xl);
         }
 
         .weekday-headers {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
-            margin-bottom: 15px;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-lg);
+            border-bottom: 2px solid var(--color-border);
         }
 
         .weekday {
             text-align: center;
             font-weight: 700;
-            color: var(--gray);
-            font-size: 0.9rem;
-            padding: 10px 0;
-            border-bottom: 2px solid var(--border);
+            color: var(--color-text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: var(--spacing-md) 0;
         }
 
         .days-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
+            gap: var(--spacing-sm);
         }
 
         .day {
             aspect-ratio: 1;
-            padding: 8px;
-            border-radius: 12px;
-            border: 2px solid transparent;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            font-size: 0.8rem;
+            border-radius: var(--radius-lg);
+            border: 2px solid transparent;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
-            background: var(--light);
+            overflow: hidden;
+            background: var(--color-bg-secondary);
+            font-size: 0.75rem;
+        }
+
+        .day::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .day:hover::before {
+            opacity: 1;
         }
 
         .day:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
         }
 
         .day.empty {
@@ -262,177 +431,272 @@
             box-shadow: none;
         }
 
-        .day-number {
-            font-weight: 700;
-            font-size: 1.1rem;
-            line-height: 1;
-            margin-bottom: 2px;
-        }
-
-        .day-action {
-            font-weight: 600;
-            font-size: 0.75rem;
-            line-height: 1;
-        }
-
-        .day-balance {
-            font-size: 0.65rem;
-            opacity: 0.7;
-            margin-top: 2px;
-            font-weight: 500;
-        }
-
         /* Day States */
         .day.work {
-            background: linear-gradient(135deg, #16a34a, #15803d);
+            background: linear-gradient(135deg, var(--color-work), var(--color-work-dark));
             color: white;
-            border-color: #166534;
+            border-color: var(--color-work-dark);
         }
 
         .day.off {
-            background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-            color: #4f46e5;
-            border-color: #a5b4fc;
+            background: linear-gradient(135deg, var(--color-off), var(--color-off-dark));
+            color: white;
+            border-color: var(--color-off-dark);
         }
 
         .day.deposit {
-            background: linear-gradient(135deg, #0891b2, #0e7490);
+            background: linear-gradient(135deg, var(--color-deposit), var(--color-deposit-dark));
             color: white;
-            border-color: #155e75;
+            border-color: var(--color-deposit-dark);
         }
 
         .day.bill {
-            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            background: linear-gradient(135deg, var(--color-bill), var(--color-bill-dark));
             color: white;
-            border-color: #991b1b;
+            border-color: var(--color-bill-dark);
         }
 
         .day.move-in {
-            background: linear-gradient(135deg, #ea580c, #c2410c);
+            background: linear-gradient(135deg, var(--color-move), var(--color-move-dark));
             color: white;
-            border-color: #92400e;
-            font-weight: bold;
+            border-color: var(--color-move-dark);
+            font-weight: 800;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
         }
 
-        /* Tips Section */
+        .day-number {
+            font-size: 1.125rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .day-emoji {
+            font-size: 1rem;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .day-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            opacity: 0.9;
+            line-height: 1;
+        }
+
+        /* ===== TIPS SECTION ===== */
         .tips {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-2xl);
+            padding: var(--spacing-3xl) var(--spacing-2xl);
+            box-shadow: var(--shadow-md);
+            animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
         }
 
-        .tips h2 {
-            font-size: 1.5rem;
-            margin-bottom: 25px;
-            color: var(--dark);
+        .tips__title {
+            font-size: 1.75rem;
             font-weight: 700;
+            margin-bottom: var(--spacing-2xl);
+            color: var(--color-primary);
         }
 
-        .tips-grid {
+        .tips__grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
         }
 
         .tip-card {
-            padding: 20px;
-            background: var(--light);
-            border-radius: 12px;
-            border-left: 4px solid var(--primary);
-            transition: all 0.3s ease;
+            padding: var(--spacing-xl);
+            background: linear-gradient(135deg, var(--color-bg-secondary), var(--color-bg-tertiary));
+            border: 1px solid var(--color-border-light);
+            border-radius: var(--radius-lg);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tip-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--color-work), var(--color-deposit), var(--color-move));
+            background-size: 200% 100%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .tip-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--color-text-tertiary);
         }
 
-        .tip-card h3 {
+        .tip-card:hover::before {
+            opacity: 1;
+        }
+
+        .tip-card__icon {
+            font-size: 1.875rem;
+            margin-bottom: var(--spacing-md);
+            display: block;
+        }
+
+        .tip-card__title {
             font-weight: 700;
-            margin-bottom: 8px;
-            color: var(--dark);
             font-size: 1rem;
+            margin-bottom: var(--spacing-md);
+            color: var(--color-primary);
         }
 
-        .tip-card p {
+        .tip-card__text {
             font-size: 0.9rem;
-            color: var(--gray);
-            line-height: 1.5;
+            color: var(--color-text-secondary);
+            line-height: 1.6;
         }
 
-        /* Footer */
+        /* ===== FOOTER SECTION ===== */
         .footer {
             text-align: center;
-            padding: 40px 20px;
-            color: var(--gray);
+            padding: var(--spacing-3xl) var(--spacing-xl);
+            margin-top: var(--spacing-3xl);
+            color: var(--color-text-secondary);
             font-size: 1.1rem;
+            animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;
         }
 
         .footer strong {
-            color: var(--dark);
+            color: var(--color-primary);
             font-weight: 700;
         }
 
-        /* Responsive */
-        @media (max-width: 1024px) {
+        /* ===== ANIMATIONS ===== */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 1200px) {
+            .container {
+                padding: var(--spacing-2xl) var(--spacing-lg);
+            }
+
             .calendars {
                 grid-template-columns: 1fr;
             }
 
-            .header h1 {
+            .header__title {
                 font-size: 2.5rem;
             }
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
             .container {
-                padding: 20px 15px;
+                padding: var(--spacing-xl) var(--spacing-md);
             }
 
-            .header h1 {
+            .header__title {
                 font-size: 2rem;
             }
 
-            .header p {
+            .header__subtitle {
                 font-size: 1rem;
             }
 
             .legend {
-                padding: 25px;
+                padding: var(--spacing-2xl) var(--spacing-lg);
             }
 
-            .calendar-header {
-                padding: 20px;
+            .calendar-card__header {
+                padding: var(--spacing-xl);
             }
 
-            .calendar-header h2 {
-                font-size: 1.3rem;
+            .calendar-card__grid {
+                padding: var(--spacing-xl);
             }
 
-            .calendar-grid {
-                padding: 20px;
+            .tips {
+                padding: var(--spacing-2xl) var(--spacing-lg);
             }
 
-            .day {
-                font-size: 0.7rem;
-            }
-
-            .day-number {
-                font-size: 0.9rem;
-            }
-
-            .legend-grid {
+            .legend__grid {
                 grid-template-columns: 1fr;
             }
 
-            .tips-grid {
+            .tips__grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-card {
+                padding: var(--spacing-lg);
+            }
+
+            .day {
+                font-size: 0.65rem;
+            }
+
+            .day-number {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: var(--spacing-lg) var(--spacing-sm);
+            }
+
+            .header__title {
+                font-size: 1.5rem;
+            }
+
+            .header__subtitle {
+                font-size: 0.9rem;
+            }
+
+            .legend {
+                padding: var(--spacing-xl) var(--spacing-md);
+            }
+
+            .calendar-card__stats {
+                grid-template-columns: 1fr;
+            }
+
+            .day {
+                font-size: 0.6rem;
+                gap: 0.25rem;
+            }
+
+            .day-emoji {
+                font-size: 0.8rem;
+            }
+
+            .stats-overview {
                 grid-template-columns: 1fr;
             }
         }
 
-        /* Print Styles */
+        /* ===== PRINT STYLES ===== */
         @media print {
             body {
                 background: white;
@@ -443,41 +707,26 @@
             }
 
             .calendars {
-                gap: 60px;
+                gap: var(--spacing-3xl);
             }
 
             .calendar-card {
                 page-break-inside: avoid;
                 box-shadow: none;
-                border: 1px solid #ddd;
+                border: 1px solid var(--color-border);
+                margin-bottom: var(--spacing-3xl);
             }
 
             .tips {
                 page-break-before: always;
             }
-        }
 
-        /* Utility Classes */
-        .text-center {
-            text-align: center;
-        }
-
-        .mt-large {
-            margin-top: 60px;
-        }
-
-        .fade-in {
-            animation: fadeIn 0.6s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            .stat-card:hover,
+            .day:hover,
+            .legend-item:hover,
+            .tip-card:hover {
+                transform: none;
+                box-shadow: none;
             }
         }
     </style>
@@ -485,48 +734,68 @@
 <body>
     <div class="container">
         <!-- Header -->
-        <div class="header fade-in">
-            <h1>📅 November & December 2024</h1>
-            <p>Financial Planning Calendar for Your Apartment Move</p>
+        <div class="header">
+            <div class="header__badge">📅 Financial Planning Guide</div>
+            <h1 class="header__title">November & December 2024</h1>
+            <p class="header__subtitle">Your strategic roadmap to apartment move-in with confidence</p>
+        </div>
+
+        <!-- Quick Stats Overview -->
+        <div class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-card__icon">🟢</div>
+                <div class="stat-card__value">36</div>
+                <div class="stat-card__label">Total Work Days</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card__icon">💰</div>
+                <div class="stat-card__value">$4,084</div>
+                <div class="stat-card__label">Total Deposits</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card__icon">🏠</div>
+                <div class="stat-card__value">$2,666</div>
+                <div class="stat-card__label">Move-In Costs</div>
+            </div>
         </div>
 
         <!-- Legend -->
-        <div class="legend fade-in">
-            <h2>Understanding Your Calendar</h2>
-            <div class="legend-grid">
+        <div class="legend">
+            <h2 class="legend__title">How to Read Your Calendar</h2>
+            <div class="legend__grid">
                 <div class="legend-item">
-                    <div class="legend-dot work">🟢</div>
-                    <div class="legend-text">
+                    <div class="legend-item__indicator legend-item__indicator--work">🟢</div>
+                    <div class="legend-item__content">
                         <h3>Work Day</h3>
-                        <p>+$115 gross, –$15 gas = $100 net</p>
+                        <p>$115 gross minus $15 gas = $100 net income</p>
                     </div>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-dot off">⚪</div>
-                    <div class="legend-text">
+                    <div class="legend-item__indicator legend-item__indicator--off">⚪</div>
+                    <div class="legend-item__content">
                         <h3>Off Day</h3>
-                        <p>Rest and recharge</p>
+                        <p>Rest, recover, and recharge</p>
                     </div>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-dot deposit">💰</div>
-                    <div class="legend-text">
+                    <div class="legend-item__indicator legend-item__indicator--deposit">💰</div>
+                    <div class="legend-item__content">
                         <h3>Deposit Day</h3>
-                        <p>Mom's paycheck arrives</p>
+                        <p>Mom's paycheck arrives ($1,021)</p>
                     </div>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-dot bill">💸</div>
-                    <div class="legend-text">
-                        <h3>Major Bills</h3>
-                        <p>Big expenses due</p>
+                    <div class="legend-item__indicator legend-item__indicator--bill">💸</div>
+                    <div class="legend-item__content">
+                        <h3>Major Expenses</h3>
+                        <p>Rent, streaming, or other bills due</p>
                     </div>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-dot move">🏠</div>
-                    <div class="legend-text">
+                    <div class="legend-item__indicator legend-item__indicator--move">🏠</div>
+                    <div class="legend-item__content">
                         <h3>Move-In Day</h3>
-                        <p>Apartment move costs</p>
+                        <p>Deposit + move-in + moving costs</p>
                     </div>
                 </div>
             </div>
@@ -535,25 +804,25 @@
         <!-- Calendars -->
         <div class="calendars">
             <!-- November Calendar -->
-            <div class="calendar-card fade-in">
-                <div class="calendar-header">
-                    <h2>🍂 November 2024</h2>
-                    <div class="calendar-stats">
-                        <div class="stat">
-                            <span class="stat-value">15</span>
-                            <span class="stat-label">Work Days</span>
+            <div class="calendar-card">
+                <div class="calendar-card__header">
+                    <div class="calendar-card__month">🍂 November 2024</div>
+                    <div class="calendar-card__stats">
+                        <div class="calendar-card__stat">
+                            <span class="calendar-card__stat-value">15</span>
+                            <span class="calendar-card__stat-label">Work Days</span>
                         </div>
-                        <div class="stat">
-                            <span class="stat-value">15</span>
-                            <span class="stat-label">Off Days</span>
+                        <div class="calendar-card__stat">
+                            <span class="calendar-card__stat-value">15</span>
+                            <span class="calendar-card__stat-label">Rest Days</span>
                         </div>
-                        <div class="stat">
-                            <span class="stat-value">$36.51</span>
-                            <span class="stat-label">End Balance</span>
+                        <div class="calendar-card__stat">
+                            <span class="calendar-card__stat-value">$36.51</span>
+                            <span class="calendar-card__stat-label">End Balance</span>
                         </div>
                     </div>
                 </div>
-                <div class="calendar-grid">
+                <div class="calendar-card__grid">
                     <div class="weekday-headers">
                         <div class="weekday">Sun</div>
                         <div class="weekday">Mon</div>
@@ -565,64 +834,64 @@
                     </div>
                     <div class="days-grid">
                         <div class="day empty"></div><div class="day empty"></div><div class="day empty"></div><div class="day empty"></div><div class="day empty"></div>
-                        <div class="day work"><div class="day-number">1</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">2</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">1</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">2</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
 
-                        <div class="day off"><div class="day-number">3</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">4</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">5</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">6</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day deposit"><div class="day-number">7</div><div class="day-action">💰 Deposit</div></div>
-                        <div class="day off"><div class="day-number">8</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day off"><div class="day-number">9</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day off"><div class="day-number">3</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">4</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">5</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">6</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day deposit"><div class="day-number">7</div><div class="day-emoji">💰</div><div class="day-label">Deposit</div></div>
+                        <div class="day off"><div class="day-number">8</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day off"><div class="day-number">9</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
 
-                        <div class="day bill"><div class="day-number">10</div><div class="day-action">💸 Bills</div></div>
-                        <div class="day off"><div class="day-number">11</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day off"><div class="day-number">12</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day off"><div class="day-number">13</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day off"><div class="day-number">14</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day off"><div class="day-number">15</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">16</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day bill"><div class="day-number">10</div><div class="day-emoji">💸</div><div class="day-label">Bills</div></div>
+                        <div class="day off"><div class="day-number">11</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day off"><div class="day-number">12</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day off"><div class="day-number">13</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day off"><div class="day-number">14</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day off"><div class="day-number">15</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">16</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
 
-                        <div class="day off"><div class="day-number">17</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">18</div><div class="day-action">🟢 Adjust</div></div>
-                        <div class="day work"><div class="day-number">19</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day work"><div class="day-number">20</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day deposit"><div class="day-number">21</div><div class="day-action">💰 Deposit</div></div>
-                        <div class="day work"><div class="day-number">22</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">23</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day off"><div class="day-number">17</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">18</div><div class="day-emoji">🔄</div><div class="day-label">Adjust</div></div>
+                        <div class="day work"><div class="day-number">19</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day work"><div class="day-number">20</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day deposit"><div class="day-number">21</div><div class="day-emoji">💰</div><div class="day-label">Deposit</div></div>
+                        <div class="day work"><div class="day-number">22</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">23</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
 
-                        <div class="day work"><div class="day-number">24</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">25</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">26</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">27</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">28</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">29</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day bill"><div class="day-number">30</div><div class="day-action">💸 Rent</div></div>
+                        <div class="day work"><div class="day-number">24</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">25</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">26</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">27</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">28</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">29</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day bill"><div class="day-number">30</div><div class="day-emoji">💸</div><div class="day-label">Rent</div></div>
                     </div>
                 </div>
             </div>
 
             <!-- December Calendar -->
-            <div class="calendar-card fade-in">
-                <div class="calendar-header">
-                    <h2>❄️ December 2024</h2>
-                    <div class="calendar-stats">
-                        <div class="stat">
-                            <span class="stat-value">21</span>
-                            <span class="stat-label">Work Days</span>
+            <div class="calendar-card">
+                <div class="calendar-card__header">
+                    <div class="calendar-card__month">❄️ December 2024</div>
+                    <div class="calendar-card__stats">
+                        <div class="calendar-card__stat">
+                            <span class="calendar-card__stat-value">21</span>
+                            <span class="calendar-card__stat-label">Work Days</span>
                         </div>
-                        <div class="stat">
-                            <span class="stat-value">10</span>
-                            <span class="stat-label">Off Days</span>
+                        <div class="calendar-card__stat">
+                            <span class="calendar-card__stat-value">10</span>
+                            <span class="calendar-card__stat-label">Rest Days</span>
                         </div>
-                        <div class="stat">
-                            <span class="stat-value">$47.07</span>
-                            <span class="stat-label">End Balance</span>
+                        <div class="calendar-card__stat">
+                            <span class="calendar-card__stat-value">$47.07</span>
+                            <span class="calendar-card__stat-label">End Balance</span>
                         </div>
                     </div>
                 </div>
-                <div class="calendar-grid">
+                <div class="calendar-card__grid">
                     <div class="weekday-headers">
                         <div class="weekday">Sun</div>
                         <div class="weekday">Mon</div>
@@ -633,80 +902,86 @@
                         <div class="weekday">Sat</div>
                     </div>
                     <div class="days-grid">
-                        <div class="day work"><div class="day-number">1</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day work"><div class="day-number">2</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day work"><div class="day-number">3</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day work"><div class="day-number">4</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day deposit"><div class="day-number">5</div><div class="day-action">💰 Deposit</div></div>
-                        <div class="day work"><div class="day-number">6</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day work"><div class="day-number">7</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day work"><div class="day-number">1</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day work"><div class="day-number">2</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day work"><div class="day-number">3</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day work"><div class="day-number">4</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day deposit"><div class="day-number">5</div><div class="day-emoji">💰</div><div class="day-label">Deposit</div></div>
+                        <div class="day work"><div class="day-number">6</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day work"><div class="day-number">7</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
 
-                        <div class="day work"><div class="day-number">8</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day work"><div class="day-number">9</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day bill"><div class="day-number">10</div><div class="day-action">💸 Bills</div></div>
-                        <div class="day work"><div class="day-number">11</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day work"><div class="day-number">12</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">13</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">14</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day work"><div class="day-number">8</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day work"><div class="day-number">9</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day bill"><div class="day-number">10</div><div class="day-emoji">💸</div><div class="day-label">Bills</div></div>
+                        <div class="day work"><div class="day-number">11</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day work"><div class="day-number">12</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">13</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">14</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
 
-                        <div class="day off"><div class="day-number">15</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">16</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">17</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">18</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day deposit"><div class="day-number">19</div><div class="day-action">💰 Deposit</div></div>
-                        <div class="day work"><div class="day-number">20</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">21</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day off"><div class="day-number">15</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">16</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">17</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">18</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day deposit"><div class="day-number">19</div><div class="day-emoji">💰</div><div class="day-label">Deposit</div></div>
+                        <div class="day work"><div class="day-number">20</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">21</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
 
-                        <div class="day work"><div class="day-number">22</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">23</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">24</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">25</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">26</div><div class="day-action">🟢 Work</div></div>
-                        <div class="day off"><div class="day-number">27</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day work"><div class="day-number">28</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day work"><div class="day-number">22</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">23</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">24</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">25</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">26</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
+                        <div class="day off"><div class="day-number">27</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day work"><div class="day-number">28</div><div class="day-emoji">🟢</div><div class="day-label">Work</div></div>
 
-                        <div class="day off"><div class="day-number">29</div><div class="day-action">⚪ Off</div></div>
-                        <div class="day move-in"><div class="day-number">30</div><div class="day-action">🏠 MOVE</div></div>
-                        <div class="day off"><div class="day-number">31</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day off"><div class="day-number">29</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
+                        <div class="day move-in"><div class="day-number">30</div><div class="day-emoji">🏠</div><div class="day-label">MOVE</div></div>
+                        <div class="day off"><div class="day-number">31</div><div class="day-emoji">⚪</div><div class="day-label">Off</div></div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Tips Section -->
-        <div class="tips fade-in">
-            <h2>✅ Success Tips</h2>
-            <div class="tips-grid">
+        <div class="tips">
+            <h2 class="tips__title">✅ Your Success Guide</h2>
+            <div class="tips__grid">
                 <div class="tip-card">
-                    <h3>💡 Income Breakdown</h3>
-                    <p>You earn $115/day on work days, spend $15/gas, resulting in $100/day net income. This is already built into all calculations.</p>
+                    <div class="tip-card__icon">💡</div>
+                    <div class="tip-card__title">Income Breakdown</div>
+                    <div class="tip-card__text">Gross income is $115/day on work days. Subtract $15 for gas, and you net $100/day. This is already factored into your plan.</div>
                 </div>
                 <div class="tip-card">
-                    <h3>🖨️ Print It Out</h3>
-                    <p>Print this calendar and put it somewhere visible—fridge, desk, or bathroom mirror. Having it visible keeps you on track.</p>
+                    <div class="tip-card__icon">🖨️</div>
+                    <div class="tip-card__title">Print & Display</div>
+                    <div class="tip-card__text">Print this calendar and post it somewhere visible. On your fridge, desk, or bathroom mirror—anywhere you'll see it daily.</div>
                 </div>
                 <div class="tip-card">
-                    <h3>📝 Track Actual Balance</h3>
-                    <p>Each day, note your actual balance next to the predicted one. This helps you stay aware of where you really stand financially.</p>
+                    <div class="tip-card__icon">📝</div>
+                    <div class="tip-card__title">Track Your Reality</div>
+                    <div class="tip-card__text">Write down your actual balance each day next to the predicted amount. This keeps you aware and accountable.</div>
                 </div>
                 <div class="tip-card">
-                    <h3>⏰ Set Bill Reminders</h3>
-                    <p>Set phone alarms for major bill days. This prevents surprises and keeps your budget on track throughout the month.</p>
+                    <div class="tip-card__icon">⏰</div>
+                    <div class="tip-card__title">Bill Reminders</div>
+                    <div class="tip-card__text">Set phone alarms for major bill days. This simple step prevents surprises and keeps you ahead of deadlines.</div>
                 </div>
                 <div class="tip-card">
-                    <h3>🎉 Celebrate December Week 1</h3>
-                    <p>The hardest week! You'll work 7 days straight in December (Dec 1-7) to build cash. But you've got this—it's worth it!</p>
+                    <div class="tip-card__icon">🔥</div>
+                    <div class="tip-card__title">December Challenge</div>
+                    <div class="tip-card__text">December 1-7 is intense: 7 straight work days. But you're building momentum for your move. You've got this!</div>
                 </div>
                 <div class="tip-card">
-                    <h3>🏠 You're Apartment-Ready</h3>
-                    <p>By December 30th, you'll have all the money you need for move-in costs. This plan guarantees you get into your new place stress-free!</p>
+                    <div class="tip-card__icon">🏡</div>
+                    <div class="tip-card__title">You're Ready!</div>
+                    <div class="tip-card__text">Follow this plan and on December 30th you'll have exactly what you need for move-in. No stress, no scrambling. Just success.</div>
                 </div>
             </div>
         </div>
 
         <!-- Footer -->
-        <div class="footer mt-large">
-            <p><strong>🎉 You've got everything you need!</strong> Follow this calendar and you'll move into your apartment with confidence. Good luck! 🏠</p>
+        <div class="footer">
+            <p><strong>🎉 You've got everything you need!</strong> Follow this calendar with intention, and you'll move into your new place with complete confidence. Let's make it happen! 🚀</p>
         </div>
     </div>
 </body>
