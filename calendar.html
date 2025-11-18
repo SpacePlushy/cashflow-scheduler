@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>November & December 2024 Financial Calendar</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --warning: #dc2626;
+            --info: #0891b2;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --dark: #0f172a;
+            --border: #e2e8f0;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            color: var(--gray);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Legend */
+        .legend {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 50px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .legend h2 {
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            color: var(--dark);
+            font-weight: 700;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--light);
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .legend-dot {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .legend-dot.work {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: white;
+        }
+
+        .legend-dot.off {
+            background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+            color: #4f46e5;
+        }
+
+        .legend-dot.deposit {
+            background: linear-gradient(135deg, #0891b2, #0e7490);
+            color: white;
+        }
+
+        .legend-dot.bill {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+        }
+
+        .legend-dot.move {
+            background: linear-gradient(135deg, #ea580c, #c2410c);
+            color: white;
+        }
+
+        .legend-text h3 {
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+
+        .legend-text p {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        /* Calendars Container */
+        .calendars {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 40px;
+            margin-bottom: 50px;
+        }
+
+        /* Calendar Card */
+        .calendar-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .calendar-header {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            padding: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .calendar-header h2 {
+            font-size: 1.75rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .calendar-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        /* Calendar Grid */
+        .calendar-grid {
+            padding: 30px;
+        }
+
+        .weekday-headers {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .weekday {
+            text-align: center;
+            font-weight: 700;
+            color: var(--gray);
+            font-size: 0.9rem;
+            padding: 10px 0;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .day {
+            aspect-ratio: 1;
+            padding: 8px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            background: var(--light);
+        }
+
+        .day:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .day.empty {
+            background: transparent;
+            cursor: default;
+            border: none;
+        }
+
+        .day.empty:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .day-number {
+            font-weight: 700;
+            font-size: 1.1rem;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .day-action {
+            font-weight: 600;
+            font-size: 0.75rem;
+            line-height: 1;
+        }
+
+        .day-balance {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        /* Day States */
+        .day.work {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: white;
+            border-color: #166534;
+        }
+
+        .day.off {
+            background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+            color: #4f46e5;
+            border-color: #a5b4fc;
+        }
+
+        .day.deposit {
+            background: linear-gradient(135deg, #0891b2, #0e7490);
+            color: white;
+            border-color: #155e75;
+        }
+
+        .day.bill {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+            border-color: #991b1b;
+        }
+
+        .day.move-in {
+            background: linear-gradient(135deg, #ea580c, #c2410c);
+            color: white;
+            border-color: #92400e;
+            font-weight: bold;
+        }
+
+        /* Tips Section */
+        .tips {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .tips h2 {
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            color: var(--dark);
+            font-weight: 700;
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .tip-card {
+            padding: 20px;
+            background: var(--light);
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .tip-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .tip-card h3 {
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--dark);
+            font-size: 1rem;
+        }
+
+        .tip-card p {
+            font-size: 0.9rem;
+            color: var(--gray);
+            line-height: 1.5;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+
+        .footer strong {
+            color: var(--dark);
+            font-weight: 700;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .calendars {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .legend {
+                padding: 25px;
+            }
+
+            .calendar-header {
+                padding: 20px;
+            }
+
+            .calendar-header h2 {
+                font-size: 1.3rem;
+            }
+
+            .calendar-grid {
+                padding: 20px;
+            }
+
+            .day {
+                font-size: 0.7rem;
+            }
+
+            .day-number {
+                font-size: 0.9rem;
+            }
+
+            .legend-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tips-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .container {
+                padding: 0;
+            }
+
+            .calendars {
+                gap: 60px;
+            }
+
+            .calendar-card {
+                page-break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+
+            .tips {
+                page-break-before: always;
+            }
+        }
+
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-large {
+            margin-top: 60px;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header fade-in">
+            <h1>📅 November & December 2024</h1>
+            <p>Financial Planning Calendar for Your Apartment Move</p>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend fade-in">
+            <h2>Understanding Your Calendar</h2>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <div class="legend-dot work">🟢</div>
+                    <div class="legend-text">
+                        <h3>Work Day</h3>
+                        <p>+$115 gross, –$15 gas = $100 net</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot off">⚪</div>
+                    <div class="legend-text">
+                        <h3>Off Day</h3>
+                        <p>Rest and recharge</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot deposit">💰</div>
+                    <div class="legend-text">
+                        <h3>Deposit Day</h3>
+                        <p>Mom's paycheck arrives</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot bill">💸</div>
+                    <div class="legend-text">
+                        <h3>Major Bills</h3>
+                        <p>Big expenses due</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot move">🏠</div>
+                    <div class="legend-text">
+                        <h3>Move-In Day</h3>
+                        <p>Apartment move costs</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendars -->
+        <div class="calendars">
+            <!-- November Calendar -->
+            <div class="calendar-card fade-in">
+                <div class="calendar-header">
+                    <h2>🍂 November 2024</h2>
+                    <div class="calendar-stats">
+                        <div class="stat">
+                            <span class="stat-value">15</span>
+                            <span class="stat-label">Work Days</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">15</span>
+                            <span class="stat-label">Off Days</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">$36.51</span>
+                            <span class="stat-label">End Balance</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="calendar-grid">
+                    <div class="weekday-headers">
+                        <div class="weekday">Sun</div>
+                        <div class="weekday">Mon</div>
+                        <div class="weekday">Tue</div>
+                        <div class="weekday">Wed</div>
+                        <div class="weekday">Thu</div>
+                        <div class="weekday">Fri</div>
+                        <div class="weekday">Sat</div>
+                    </div>
+                    <div class="days-grid">
+                        <div class="day empty"></div><div class="day empty"></div><div class="day empty"></div><div class="day empty"></div><div class="day empty"></div>
+                        <div class="day work"><div class="day-number">1</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">2</div><div class="day-action">⚪ Off</div></div>
+
+                        <div class="day off"><div class="day-number">3</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">4</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">5</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">6</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day deposit"><div class="day-number">7</div><div class="day-action">💰 Deposit</div></div>
+                        <div class="day off"><div class="day-number">8</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day off"><div class="day-number">9</div><div class="day-action">⚪ Off</div></div>
+
+                        <div class="day bill"><div class="day-number">10</div><div class="day-action">💸 Bills</div></div>
+                        <div class="day off"><div class="day-number">11</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day off"><div class="day-number">12</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day off"><div class="day-number">13</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day off"><div class="day-number">14</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day off"><div class="day-number">15</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">16</div><div class="day-action">🟢 Work</div></div>
+
+                        <div class="day off"><div class="day-number">17</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">18</div><div class="day-action">🟢 Adjust</div></div>
+                        <div class="day work"><div class="day-number">19</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day work"><div class="day-number">20</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day deposit"><div class="day-number">21</div><div class="day-action">💰 Deposit</div></div>
+                        <div class="day work"><div class="day-number">22</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">23</div><div class="day-action">⚪ Off</div></div>
+
+                        <div class="day work"><div class="day-number">24</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">25</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">26</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">27</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">28</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">29</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day bill"><div class="day-number">30</div><div class="day-action">💸 Rent</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- December Calendar -->
+            <div class="calendar-card fade-in">
+                <div class="calendar-header">
+                    <h2>❄️ December 2024</h2>
+                    <div class="calendar-stats">
+                        <div class="stat">
+                            <span class="stat-value">21</span>
+                            <span class="stat-label">Work Days</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">10</span>
+                            <span class="stat-label">Off Days</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">$47.07</span>
+                            <span class="stat-label">End Balance</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="calendar-grid">
+                    <div class="weekday-headers">
+                        <div class="weekday">Sun</div>
+                        <div class="weekday">Mon</div>
+                        <div class="weekday">Tue</div>
+                        <div class="weekday">Wed</div>
+                        <div class="weekday">Thu</div>
+                        <div class="weekday">Fri</div>
+                        <div class="weekday">Sat</div>
+                    </div>
+                    <div class="days-grid">
+                        <div class="day work"><div class="day-number">1</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day work"><div class="day-number">2</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day work"><div class="day-number">3</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day work"><div class="day-number">4</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day deposit"><div class="day-number">5</div><div class="day-action">💰 Deposit</div></div>
+                        <div class="day work"><div class="day-number">6</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day work"><div class="day-number">7</div><div class="day-action">🟢 Work</div></div>
+
+                        <div class="day work"><div class="day-number">8</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day work"><div class="day-number">9</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day bill"><div class="day-number">10</div><div class="day-action">💸 Bills</div></div>
+                        <div class="day work"><div class="day-number">11</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day work"><div class="day-number">12</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">13</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">14</div><div class="day-action">🟢 Work</div></div>
+
+                        <div class="day off"><div class="day-number">15</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">16</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">17</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">18</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day deposit"><div class="day-number">19</div><div class="day-action">💰 Deposit</div></div>
+                        <div class="day work"><div class="day-number">20</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">21</div><div class="day-action">⚪ Off</div></div>
+
+                        <div class="day work"><div class="day-number">22</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">23</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">24</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">25</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">26</div><div class="day-action">🟢 Work</div></div>
+                        <div class="day off"><div class="day-number">27</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day work"><div class="day-number">28</div><div class="day-action">🟢 Work</div></div>
+
+                        <div class="day off"><div class="day-number">29</div><div class="day-action">⚪ Off</div></div>
+                        <div class="day move-in"><div class="day-number">30</div><div class="day-action">🏠 MOVE</div></div>
+                        <div class="day off"><div class="day-number">31</div><div class="day-action">⚪ Off</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips Section -->
+        <div class="tips fade-in">
+            <h2>✅ Success Tips</h2>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <h3>💡 Income Breakdown</h3>
+                    <p>You earn $115/day on work days, spend $15/gas, resulting in $100/day net income. This is already built into all calculations.</p>
+                </div>
+                <div class="tip-card">
+                    <h3>🖨️ Print It Out</h3>
+                    <p>Print this calendar and put it somewhere visible—fridge, desk, or bathroom mirror. Having it visible keeps you on track.</p>
+                </div>
+                <div class="tip-card">
+                    <h3>📝 Track Actual Balance</h3>
+                    <p>Each day, note your actual balance next to the predicted one. This helps you stay aware of where you really stand financially.</p>
+                </div>
+                <div class="tip-card">
+                    <h3>⏰ Set Bill Reminders</h3>
+                    <p>Set phone alarms for major bill days. This prevents surprises and keeps your budget on track throughout the month.</p>
+                </div>
+                <div class="tip-card">
+                    <h3>🎉 Celebrate December Week 1</h3>
+                    <p>The hardest week! You'll work 7 days straight in December (Dec 1-7) to build cash. But you've got this—it's worth it!</p>
+                </div>
+                <div class="tip-card">
+                    <h3>🏠 You're Apartment-Ready</h3>
+                    <p>By December 30th, you'll have all the money you need for move-in costs. This plan guarantees you get into your new place stress-free!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer mt-large">
+            <p><strong>🎉 You've got everything you need!</strong> Follow this calendar and you'll move into your apartment with confidence. Good luck! 🏠</p>
+        </div>
+    </div>
+</body>
+</html>

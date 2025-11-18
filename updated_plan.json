@@ -1,0 +1,177 @@
+{
+  "start_balance": 90.5,
+  "target_end": 90.5,
+  "band": 100.0,
+  "rent_guard": 1636.0,
+  "deposits": [
+    {
+      "day": 7,
+      "amount": 1021.0
+    },
+    {
+      "day": 21,
+      "amount": 1021.0
+    }
+  ],
+  "bills": [
+    {
+      "day": 1,
+      "name": "Auto Insurance",
+      "amount": 108.0
+    },
+    {
+      "day": 2,
+      "name": "YouTube Premium",
+      "amount": 8.0
+    },
+    {
+      "day": 5,
+      "name": "Groceries",
+      "amount": 112.5
+    },
+    {
+      "day": 5,
+      "name": "Weed",
+      "amount": 20.0
+    },
+    {
+      "day": 8,
+      "name": "Paramount Plus",
+      "amount": 12.0
+    },
+    {
+      "day": 8,
+      "name": "iPad AppleCare",
+      "amount": 8.49
+    },
+    {
+      "day": 10,
+      "name": "Streaming Svcs",
+      "amount": 230.0
+    },
+    {
+      "day": 11,
+      "name": "Cat Food",
+      "amount": 40.0
+    },
+    {
+      "day": 12,
+      "name": "Groceries",
+      "amount": 112.5
+    },
+    {
+      "day": 12,
+      "name": "Weed",
+      "amount": 20.0
+    },
+    {
+      "day": 14,
+      "name": "iPad AppleCare",
+      "amount": 8.49
+    },
+    {
+      "day": 16,
+      "name": "Cat Food",
+      "amount": 40.0
+    },
+    {
+      "day": 19,
+      "name": "Groceries",
+      "amount": 112.5
+    },
+    {
+      "day": 19,
+      "name": "Weed",
+      "amount": 20.0
+    },
+    {
+      "day": 22,
+      "name": "Cell Phone",
+      "amount": 140.0
+    },
+    {
+      "day": 23,
+      "name": "Cat Food",
+      "amount": 40.0
+    },
+    {
+      "day": 10,
+      "name": "AI Subscription",
+      "amount": 220.0
+    },
+    {
+      "day": 6,
+      "name": "Electric",
+      "amount": 139.0
+    },
+    {
+      "day": 26,
+      "name": "Groceries",
+      "amount": 112.5
+    },
+    {
+      "day": 26,
+      "name": "Weed",
+      "amount": 20.0
+    },
+    {
+      "day": 28,
+      "name": "iPhone AppleCare",
+      "amount": 13.49
+    },
+    {
+      "day": 29,
+      "name": "Cat Food",
+      "amount": 40.0
+    },
+    {
+      "day": 30,
+      "name": "Rent",
+      "amount": 1636.0
+    }
+  ],
+  "actions": [
+    "Spark",
+    "O",
+    "O",
+    "Spark",
+    "O",
+    "Spark",
+    "O",
+    "O",
+    "O",
+    "O",
+    "O",
+    "O",
+    "O",
+    "O",
+    "O",
+    "Spark",
+    "O",
+    "Spark",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "manual_adjustments": [
+    {
+      "day": 18,
+      "amount": -382.52,
+      "note": "cli set-eod"
+    }
+  ],
+  "locks": [],
+  "metadata": {
+    "version": "1.0.0",
+    "income_note": "Gross income: $115/day on work days. Gas cost: $15/day. Net income: $100/day (reflected in all calculations)"
+  }
+}

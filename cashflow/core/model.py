@@ -44,11 +44,14 @@ def cents_to_str(cents: int) -> str:
     return f"{sign}{cents_abs // 100}.{cents_abs % 100:02d}"
 
 
-# Spark shift payouts (integer cents). Off days net to 0; each Spark workday
-# deposits $100 with no deductions.
+# Spark shift payouts (integer cents).
+# Gross income: $115/day on Spark days
+# Gas expense: -$15/day (work commute)
+# Net income: $100/day ($10,000 cents)
+# Off days net to $0.
 SHIFT_NET_CENTS: Dict[str, int] = {
     "O": 0,
-    "Spark": 10_000,
+    "Spark": 10_000,  # $115 gross - $15 gas = $100 net
 }
 
 
