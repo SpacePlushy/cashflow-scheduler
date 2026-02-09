@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cashflow Scheduler - Architecture & Data Flow</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            margin: 40px;
+            background: white;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .diagram-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .legend {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .legend h2 {
+            color: #333;
+            font-size: 18px;
+            margin-top: 0;
+        }
+        .legend-section {
+            margin-bottom: 15px;
+        }
+        .legend-section h3 {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .legend-section ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .legend-section li {
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #666;
+        }
+        .color-box {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            margin-right: 8px;
+            border: 1px solid #ccc;
+            vertical-align: middle;
+        }
+        @media print {
+            body {
+                margin: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Cashflow Scheduler</h1>
+    <div class="subtitle">Architecture & Data Flow Diagram</div>
+
+    <div class="diagram-container">
+        <div class="mermaid">
+flowchart TB
+    subgraph Entry["Entry Points"]
+        CLI["CLI Commands
+        solve, show, export,
+        verify, set-eod, calendar"]
+        API["REST API
+        POST /solve
+        POST /set_eod
+        POST /export"]
+        USER["User Input
+        plan.json"]
+    end
+
+    subgraph Input["Input Processing (io/store.py)"]
+        LOAD["load_plan
+        Security Checks:
+        Path traversal
+        Symlink resolution"]
+        PARSE["plan_from_dict
+        JSON parsing
+        to_cents conversion"]
+    end
+
+    subgraph Model["Core Data Model (core/model.py)"]
+        PLAN["Plan Object
+        start_balance_cents
+        target_end_cents
+        deposits, bills
+        actions
+        manual_adjustments"]
+    end
+
+    subgraph Engines["Optimization Engines"]
+        DP["DP Solver
+        engines/dp.py
+        31-layer DP
+        State pruning
+        Path reconstruction"]
+        CPSAT["CP-SAT Solver
+        engines/cpsat.py
+        Constraint programming
+        3-stage lex optimization
+        Falls back to DP"]
+    end
+
+    subgraph Processing["Solution Processing"]
+        SCHEDULE["Schedule Object
+        actions[30]
+        objective tuple
+        final_closing_cents
+        ledger"]
+        LEDGER["build_ledger
+        core/ledger.py
+        Daily cashflow breakdown"]
+        VALIDATE["validate
+        core/validate.py
+        Day 1 = Spark
+        Non-negative balance
+        Band constraint
+        Rent guard"]
+    end
+
+    subgraph Rendering["Output Rendering (io/render.py)"]
+        MARKDOWN["Markdown Table"]
+        CSV["CSV Export"]
+        JSON["JSON Export"]
+        RICH["Rich Table
+        Terminal Display"]
+        CALENDAR["PNG Calendar
+        io/calendar.py"]
+    end
+
+    subgraph Output["Output"]
+        CLIOUT["CLI Output
+        Colored tables
+        Validation report"]
+        APIOUT["API Response
+        JSON payload"]
+    end
+
+    USER --> CLI
+    USER --> API
+    CLI --> LOAD
+    API --> PARSE
+    LOAD --> PARSE
+    PARSE --> PLAN
+
+    PLAN -->|Default/Fast| DP
+    PLAN -->|Advanced/Verify| CPSAT
+    CPSAT -.->|Timeout/Fallback| DP
+
+    DP --> SCHEDULE
+    CPSAT --> SCHEDULE
+    SCHEDULE --> LEDGER
+    LEDGER --> VALIDATE
+
+    VALIDATE --> MARKDOWN
+    VALIDATE --> CSV
+    VALIDATE --> JSON
+    VALIDATE --> RICH
+    VALIDATE --> CALENDAR
+
+    MARKDOWN --> CLIOUT
+    CSV --> CLIOUT
+    RICH --> CLIOUT
+    CALENDAR --> CLIOUT
+    JSON --> APIOUT
+    MARKDOWN --> APIOUT
+    CSV --> APIOUT
+
+    CLI -.->|set-eod command| ADJUST["Adjust Plan
+    Lock prefix days
+    Add manual adjustment
+    Re-solve"]
+    ADJUST -.-> PLAN
+
+    style PLAN fill:#e1f5ff,stroke:#333,stroke-width:2px
+    style SCHEDULE fill:#e1f5ff,stroke:#333,stroke-width:2px
+    style DP fill:#ffe1e1,stroke:#333,stroke-width:2px
+    style CPSAT fill:#ffe1e1,stroke:#333,stroke-width:2px
+    style VALIDATE fill:#e1ffe1,stroke:#333,stroke-width:2px
+        </div>
+    </div>
+
+    <div class="legend">
+        <h2>Key Data Flow Highlights</h2>
+
+        <div class="legend-section">
+            <h3>1. Input Flow</h3>
+            <ul>
+                <li>User provides <code>plan.json</code> via CLI or API</li>
+                <li>Security checks (path traversal, symlinks)</li>
+                <li>JSON parsed and converted to integer cents</li>
+            </ul>
+        </div>
+
+        <div class="legend-section">
+            <h3>2. Optimization</h3>
+            <ul>
+                <li><span class="color-box" style="background:#ffe1e1;"></span><strong>DP Solver</strong> (primary): Fast dynamic programming with 31 layers</li>
+                <li><span class="color-box" style="background:#ffe1e1;"></span><strong>CP-SAT Solver</strong> (advanced): Constraint programming with automatic DP fallback</li>
+                <li>Both minimize: (workdays, back-to-back pairs, |balance difference|)</li>
+            </ul>
+        </div>
+
+        <div class="legend-section">
+            <h3>3. Validation</h3>
+            <ul>
+                <li><span class="color-box" style="background:#e1ffe1;"></span>Day 1 must be "Spark"</li>
+                <li>No negative balances</li>
+                <li>Final balance within target band</li>
+                <li>Sufficient cash before day-30 rent</li>
+            </ul>
+        </div>
+
+        <div class="legend-section">
+            <h3>4. Output</h3>
+            <ul>
+                <li>Multiple formats: Markdown, CSV, JSON, Rich tables, PNG calendars</li>
+                <li>Routes to CLI (terminal) or API (JSON response)</li>
+            </ul>
+        </div>
+
+        <div class="legend-section">
+            <h3>5. Special Operations</h3>
+            <ul>
+                <li><strong>set-eod</strong>: Locks solved prefix, adds adjustment, re-optimizes remaining days</li>
+            </ul>
+        </div>
+
+        <div class="legend-section">
+            <h3>Color Legend</h3>
+            <ul>
+                <li><span class="color-box" style="background:#e1f5ff;"></span>Data Models (Plan, Schedule)</li>
+                <li><span class="color-box" style="background:#ffe1e1;"></span>Solver Engines (DP, CP-SAT)</li>
+                <li><span class="color-box" style="background:#e1ffe1;"></span>Validation</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>
